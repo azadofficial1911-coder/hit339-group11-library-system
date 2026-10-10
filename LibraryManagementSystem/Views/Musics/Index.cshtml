@@ -1,0 +1,202 @@
+@model IEnumerable<LibraryManagementSystem.Models.Music>
+@using LibraryManagementSystem.Models
+
+@{
+    ViewData["Title"] = "Manage Music";
+
+    string? searchTerm = ViewData["SearchTerm"]?.ToString();
+    string? selectedStatus = ViewData["SelectedStatus"]?.ToString();
+}
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <h1 class="display-5 fw-bold mb-1">Manage Music</h1>
+        <p class="text-muted mb-0">
+            Add, search, update and manage the library's music collection.
+        </p>
+    </div>
+
+    <a asp-action="Create" class="btn btn-primary">
+        Add New Music
+    </a>
+</div>
+
+@if (TempData["SuccessMessage"] is not null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close">
+        </button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] is not null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close">
+        </button>
+    </div>
+}
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form asp-action="Index" method="get">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-6">
+                    <label for="searchTerm" class="form-label">
+                        Search
+                    </label>
+
+                    <input id="searchTerm"
+                           name="searchTerm"
+                           value="@searchTerm"
+                           class="form-control"
+                           placeholder="Search by name, code, artist, genre or format" />
+                </div>
+
+                <div class="col-lg-3">
+                    <label for="status" class="form-label">
+                        Status
+                    </label>
+
+                    <select id="status"
+                            name="status"
+                            class="form-select">
+                        <option value="">All statuses</option>
+
+                        @foreach (ItemStatus status in Enum.GetValues<ItemStatus>())
+                        {
+                            if (selectedStatus == status.ToString())
+                            {
+                                <option value="@status" selected>
+                                    @status
+                                </option>
+                            }
+                            else
+                            {
+                                <option value="@status">
+                                    @status
+                                </option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="col-lg-2 d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        Search
+                    </button>
+                </div>
+
+                <div class="col-lg-1 d-grid">
+                    <a asp-action="Index"
+                       class="btn btn-outline-secondary">
+                        Clear
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.Any())
+{
+    <div class="table-responsive rounded border shadow-sm">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Library Code</th>
+                    <th>Name</th>
+                    <th>Artist</th>
+                    <th>Genre</th>
+                    <th>Format</th>
+                    <th>Year</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var music in Model)
+                {
+                    string statusClass = music.Status switch
+                    {
+                        ItemStatus.Available => "bg-success",
+                        ItemStatus.Borrowed => "bg-primary",
+                        ItemStatus.Damaged => "bg-warning text-dark",
+                        ItemStatus.Destroyed => "bg-danger",
+                        _ => "bg-secondary"
+                    };
+
+                    <tr>
+                        <td class="fw-semibold">
+                            @music.LibraryCode
+                        </td>
+
+                        <td>@music.Name</td>
+                        <td>@music.Artist</td>
+                        <td>@music.MusicGenre</td>
+                        <td>@music.Format</td>
+                        <td>@music.ReleaseYear</td>
+
+                        <td>
+                            <span class="badge @statusClass">
+                                @music.Status
+                            </span>
+                        </td>
+
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm"
+                                 role="group"
+                                 aria-label="Music actions">
+
+                                <a asp-action="Details"
+                                   asp-route-id="@music.Id"
+                                   class="btn btn-outline-info">
+                                    Details
+                                </a>
+
+                                <a asp-action="Edit"
+                                   asp-route-id="@music.Id"
+                                   class="btn btn-outline-primary">
+                                    Edit
+                                </a>
+
+                                <a asp-action="Delete"
+                                   asp-route-id="@music.Id"
+                                   class="btn btn-outline-danger">
+                                    Delete
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="card border-primary shadow-sm">
+        <div class="card-body text-center py-5">
+            <h3 class="h4">No music found</h3>
+
+            <p class="text-muted">
+                Try changing the search filters or add a new music item.
+            </p>
+
+            <a asp-action="Create" class="btn btn-primary">
+                Add New Music
+            </a>
+        </div>
+    </div>
+}

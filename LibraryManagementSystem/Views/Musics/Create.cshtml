@@ -1,0 +1,165 @@
+@model LibraryManagementSystem.Models.Music
+@using LibraryManagementSystem.Models
+
+@{
+    ViewData["Title"] = "Add New Music";
+}
+
+<div class="row justify-content-center">
+    <div class="col-xl-9 col-lg-10">
+        <div class="mb-4">
+            <h1 class="display-5 fw-bold mb-1">Add New Music</h1>
+
+            <p class="text-muted mb-0">
+                Enter the music item's library and release information.
+            </p>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly"
+                         class="text-danger mb-3">
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label asp-for="Name" class="form-label">
+                                Item Name
+                            </label>
+
+                            <input asp-for="Name"
+                                   class="form-control"
+                                   placeholder="Example: Thriller" />
+
+                            <span asp-validation-for="Name"
+                                  class="text-danger">
+                            </span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="LibraryCode"
+                                   class="form-label">
+                            </label>
+
+                            <input asp-for="LibraryCode"
+                                   class="form-control"
+                                   placeholder="Example: MU-1001" />
+
+                            <span asp-validation-for="LibraryCode"
+                                  class="text-danger">
+                            </span>
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="Description"
+                                   class="form-label">
+                            </label>
+
+                            <textarea asp-for="Description"
+                                      class="form-control"
+                                      rows="4"
+                                      placeholder="Enter a short description of this music item">
+                            </textarea>
+
+                            <span asp-validation-for="Description"
+                                  class="text-danger">
+                            </span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Artist"
+                                   class="form-label">
+                            </label>
+
+                            <input asp-for="Artist"
+                                   class="form-control"
+                                   placeholder="Example: Michael Jackson" />
+
+                            <span asp-validation-for="Artist"
+                                  class="text-danger">
+                            </span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="MusicGenre"
+                                   class="form-label">
+                                Music Genre
+                            </label>
+
+                            <input asp-for="MusicGenre"
+                                   class="form-control"
+                                   placeholder="Example: Pop" />
+
+                            <span asp-validation-for="MusicGenre"
+                                  class="text-danger">
+                            </span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="ReleaseYear"
+                                   class="form-label">
+                                Release Year
+                            </label>
+
+                            <input asp-for="ReleaseYear"
+                                   class="form-control" />
+
+                            <span asp-validation-for="ReleaseYear"
+                                  class="text-danger">
+                            </span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="Format"
+                                   class="form-label">
+                            </label>
+
+                            <input asp-for="Format"
+                                   class="form-control"
+                                   placeholder="Example: CD, Vinyl or Digital" />
+
+                            <span asp-validation-for="Format"
+                                  class="text-danger">
+                            </span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="Status"
+                                   class="form-label">
+                                Item Status
+                            </label>
+
+                            <select asp-for="Status"
+                                    asp-items="Html.GetEnumSelectList<ItemStatus>()"
+                                    class="form-select">
+                            </select>
+
+                            <span asp-validation-for="Status"
+                                  class="text-danger">
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 mt-4">
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Save Music
+                        </button>
+
+                        <a asp-action="Index"
+                           class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

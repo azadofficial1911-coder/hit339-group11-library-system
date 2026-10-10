@@ -1,0 +1,71 @@
+﻿@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="mb-4">
+    <h1>Admin Dashboard</h1>
+
+    <p class="text-muted">
+        Manage the library's books, music and toys.
+    </p>
+</div>
+
+<div class="alert alert-success mb-4">
+    You are signed in with the Admin role.
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body d-flex flex-column">
+                <h2 class="h4">Books</h2>
+
+                <p class="text-muted flex-grow-1">
+                    Add, search, update and delete library books.
+                </p>
+
+                <a asp-controller="Books"
+                   asp-action="Index"
+                   class="btn btn-primary">
+                    Manage Books
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body d-flex flex-column">
+                <h2 class="h4">Music</h2>
+
+                <p class="text-muted flex-grow-1">
+                    Add, search, update and delete music items.
+                </p>
+
+                <a asp-controller="Musics"
+                   asp-action="Index"
+                   class="btn btn-primary">
+                    Manage Music
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body d-flex flex-column">
+                <h2 class="h4">Toys</h2>
+
+                <p class="text-muted flex-grow-1">
+                    Add, search, update and delete library toys.
+                </p>
+
+                <a asp-controller="Toys"
+                   asp-action="Index"
+                   class="btn btn-primary">
+                    Manage Toys
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

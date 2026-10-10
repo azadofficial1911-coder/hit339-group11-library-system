@@ -1,0 +1,76 @@
+@model LibraryManagementSystem.Models.Book
+@using LibraryManagementSystem.Models
+
+@{
+    ViewData["Title"] = "Book Details";
+
+    string statusClass = Model.Status switch
+    {
+        ItemStatus.Available => "bg-success",
+        ItemStatus.Borrowed => "bg-primary",
+        ItemStatus.Damaged => "bg-warning text-dark",
+        ItemStatus.Destroyed => "bg-danger",
+        _ => "bg-secondary"
+    };
+}
+
+<div class="row justify-content-center">
+    <div class="col-xl-8 col-lg-9">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+            <div>
+                <h1 class="mb-1">@Model.Name</h1>
+                <p class="text-muted mb-0">Book details</p>
+            </div>
+
+            <span class="badge @statusClass fs-6">
+                @Model.Status
+            </span>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Library Code</dt>
+                    <dd class="col-sm-8">@Model.LibraryCode</dd>
+
+                    <dt class="col-sm-4">Description</dt>
+                    <dd class="col-sm-8">@Model.Description</dd>
+
+                    <dt class="col-sm-4">Author</dt>
+                    <dd class="col-sm-8">@Model.Author</dd>
+
+                    <dt class="col-sm-4">Genre</dt>
+                    <dd class="col-sm-8">@Model.Genre</dd>
+
+                    <dt class="col-sm-4">ISBN</dt>
+                    <dd class="col-sm-8">
+                        @(string.IsNullOrWhiteSpace(Model.Isbn)
+                            ? "Not provided"
+                            : Model.Isbn)
+                    </dd>
+
+                    <dt class="col-sm-4">Publication Year</dt>
+                    <dd class="col-sm-8">@Model.PublicationYear</dd>
+
+                    <dt class="col-sm-4">Date Added</dt>
+                    <dd class="col-sm-8">
+                        @Model.DateAdded.ToString("dd MMMM yyyy")
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="btn btn-primary">
+                Edit Book
+            </a>
+
+            <a asp-action="Index"
+               class="btn btn-outline-secondary">
+                Back to Books
+            </a>
+        </div>
+    </div>
+</div>

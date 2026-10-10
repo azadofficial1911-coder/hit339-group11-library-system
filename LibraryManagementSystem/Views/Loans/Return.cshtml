@@ -1,0 +1,70 @@
+﻿@model LibraryManagementSystem.ViewModels.ReturnItemViewModel
+
+@{
+    ViewData["Title"] = "Return Item";
+}
+
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="mb-4">
+            <h1>Return Item</h1>
+
+            <p class="text-muted">
+                Enter the item code to complete its active loan.
+            </p>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <div class="alert alert-info">
+                    The system will automatically check the due date
+                    and calculate any late fine.
+                </div>
+
+                <form asp-action="Return"
+                      method="post">
+
+                    <div asp-validation-summary="ModelOnly"
+                         class="text-danger mb-3">
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="LibraryCode"
+                               class="form-label">
+                        </label>
+
+                        <input asp-for="LibraryCode"
+                               class="form-control"
+                               placeholder="Example: BK-1001"
+                               autocomplete="off"
+                               autofocus />
+
+                        <span asp-validation-for="LibraryCode"
+                              class="text-danger">
+                        </span>
+
+                        <div class="form-text">
+                            Enter the code of the item currently on loan.
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="submit"
+                                class="btn btn-success">
+                            Confirm Return
+                        </button>
+
+                        <a asp-action="Index"
+                           class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

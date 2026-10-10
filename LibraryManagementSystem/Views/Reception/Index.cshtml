@@ -1,0 +1,89 @@
+﻿@{
+    ViewData["Title"] = "Reception Dashboard";
+}
+
+<div class="mb-4">
+    <h1>Reception Dashboard</h1>
+
+    <p class="text-muted">
+        Manage borrowers, borrowing transactions, returns and fines.
+    </p>
+</div>
+
+<div class="alert alert-info mb-4">
+    You are signed in with the Reception role.
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body d-flex flex-column">
+                <h2 class="h4">Borrowers</h2>
+
+                <p class="text-muted flex-grow-1">
+                    Create, search, update and manage borrower details.
+                </p>
+
+                <a asp-controller="Borrowers"
+                   asp-action="Index"
+                   class="btn btn-outline-primary">
+                    Manage Borrowers
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body d-flex flex-column">
+                <h2 class="h4">Borrow Item</h2>
+
+                <p class="text-muted flex-grow-1">
+                    Issue an available item using its library code.
+                </p>
+
+                <a asp-controller="Loans"
+                   asp-action="Borrow"
+                   class="btn btn-primary">
+                    Borrow Item
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body d-flex flex-column">
+                <h2 class="h4">Return Item</h2>
+
+                <p class="text-muted flex-grow-1">
+                    Return an item and automatically calculate its fine.
+                </p>
+
+                <a asp-controller="Loans"
+                   asp-action="Return"
+                   class="btn btn-success">
+                    Return Item
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body d-flex flex-column">
+                <h2 class="h4">Loan Records</h2>
+
+                <p class="text-muted flex-grow-1">
+                    Search active, overdue and returned transactions.
+                </p>
+
+                <a asp-controller="Loans"
+                   asp-action="Index"
+                   class="btn btn-outline-secondary">
+                    View Loan Records
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,106 @@
+@model LibraryManagementSystem.Models.Borrower
+
+@{
+    ViewData["Title"] = "Borrower Details";
+}
+
+<div class="row justify-content-center">
+    <div class="col-xl-9 col-lg-10">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+            <div>
+                <h1 class="display-5 fw-bold mb-1">
+                    Borrower Details
+                </h1>
+
+                <p class="text-muted mb-0">
+                    View this borrower's contact and membership information.
+                </p>
+            </div>
+
+            @if (Model.IsActive)
+            {
+                <span class="badge bg-success fs-6">Active</span>
+            }
+            else
+            {
+                <span class="badge bg-secondary fs-6">Inactive</span>
+            }
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="text-muted small">Borrower Code</div>
+                        <div class="fs-5 fw-semibold">
+                            @Model.BorrowerCode
+                        </div>
+                    </div>
+
+                    <div class="col-md-8">
+                        <div class="text-muted small">Full Name</div>
+                        <div class="fs-5 fw-semibold">
+                            @Model.FullName
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <hr class="my-0" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="text-muted small">Email</div>
+                        <div>@Model.Email</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="text-muted small">Phone Number</div>
+                        <div>@Model.PhoneNumber</div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="text-muted small">Address</div>
+                        <div>@Model.Address</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="text-muted small">Date of Birth</div>
+
+                        <div>
+                            @(Model.DateOfBirth?.ToString("dd MMM yyyy")
+                                ?? "Not provided")
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="text-muted small">Registration Date</div>
+
+                        <div>
+                            @Model.RegistrationDate
+                            .ToLocalTime()
+                            .ToString("dd MMM yyyy")
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="text-muted small">Membership</div>
+                        <div>@(Model.IsActive ? "Active" : "Inactive")</div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+                    <a asp-action="Edit"
+                       asp-route-id="@Model.Id"
+                       class="btn btn-primary">
+                        Edit Borrower
+                    </a>
+
+                    <a asp-action="Index"
+                       class="btn btn-outline-secondary">
+                        Back to Borrowers
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

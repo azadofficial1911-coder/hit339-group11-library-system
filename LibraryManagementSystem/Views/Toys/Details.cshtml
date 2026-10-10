@@ -1,0 +1,136 @@
+@model LibraryManagementSystem.Models.Toy
+@using LibraryManagementSystem.Models
+
+@{
+    ViewData["Title"] = "Toy Details";
+
+    string statusClass = Model.Status switch
+    {
+        ItemStatus.Available => "bg-success",
+        ItemStatus.Borrowed => "bg-primary",
+        ItemStatus.Damaged => "bg-warning text-dark",
+        ItemStatus.Destroyed => "bg-danger",
+        _ => "bg-secondary"
+    };
+}
+
+<div class="row justify-content-center">
+    <div class="col-xl-9 col-lg-10">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+            <div>
+                <h1 class="display-5 fw-bold mb-1">Toy Details</h1>
+                <p class="text-muted mb-0">
+                    View the complete information for this toy.
+                </p>
+            </div>
+
+            <span class="badge @statusClass fs-6">
+                @Model.Status
+            </span>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-8">
+                        <div class="text-muted small">Item Name</div>
+                        <div class="fs-5 fw-semibold">@Model.Name</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="text-muted small">Library Code</div>
+                        <div class="fs-5 fw-semibold">
+                            @Model.LibraryCode
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <hr class="my-0" />
+                    </div>
+
+                    <div class="col-12">
+                        <div class="text-muted small">Description</div>
+
+                        <div>
+                            @if (string.IsNullOrWhiteSpace(Model.Description))
+                            {
+                                <span class="text-muted">
+                                    No description provided.
+                                </span>
+                            }
+                            else
+                            {
+                                @Model.Description
+                            }
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="text-muted small">Toy Type</div>
+                        <div class="fw-semibold">@Model.ToyType</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="text-muted small">Manufacturer</div>
+                        <div class="fw-semibold">@Model.Manufacturer</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="text-muted small">Recommended Age</div>
+                        <div class="fw-semibold">
+                            @Model.RecommendedAge years and above
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="text-muted small">Item Status</div>
+                        <div>
+                            <span class="badge @statusClass">
+                                @Model.Status
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="text-muted small">Date Added</div>
+                        <div class="fw-semibold">
+                            @Model.DateAdded.ToLocalTime().ToString("dd MMMM yyyy")
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="text-muted small">
+                            Safety Information
+                        </div>
+
+                        <div>
+                            @if (string.IsNullOrWhiteSpace(Model.SafetyInformation))
+                            {
+                                <span class="text-muted">
+                                    No safety information provided.
+                                </span>
+                            }
+                            else
+                            {
+                                @Model.SafetyInformation
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+                    <a asp-action="Edit"
+                       asp-route-id="@Model.Id"
+                       class="btn btn-primary">
+                        Edit Toy
+                    </a>
+
+                    <a asp-action="Index"
+                       class="btn btn-outline-secondary">
+                        Back to Toys
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

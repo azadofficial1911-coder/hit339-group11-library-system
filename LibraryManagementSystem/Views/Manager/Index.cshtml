@@ -1,0 +1,326 @@
+﻿@model LibraryManagementSystem.ViewModels.ManagerDashboardViewModel
+
+@{
+    ViewData["Title"] = "Manager Dashboard";
+
+    string availabilityWidth =
+        $"{Math.Clamp(Model.AvailabilityPercentage, 0, 100):0.##}%";
+
+    string returnWidth =
+        $"{Math.Clamp(Model.ReturnPercentage, 0, 100):0.##}%";
+}
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h1>Manager Dashboard</h1>
+
+        <p class="text-muted mb-0">
+            View library, borrowing and financial statistics.
+        </p>
+    </div>
+
+    <div class="text-muted">
+        Updated @DateTime.Now.ToString("dd MMM yyyy, h:mm tt")
+    </div>
+</div>
+
+<div class="alert alert-info">
+    You are signed in with the Manager role.
+</div>
+
+<section class="mb-5">
+    <h2 class="h4 mb-3">Borrowing Statistics</h2>
+
+    <div class="row g-3">
+        <div class="col-6 col-xl-3">
+            <div class="card shadow-sm h-100 border-primary">
+                <div class="card-body">
+                    <div class="text-muted">Total Loans</div>
+
+                    <div class="display-6 fw-bold">
+                        @Model.TotalLoans
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-xl-3">
+            <div class="card shadow-sm h-100 border-primary">
+                <div class="card-body">
+                    <div class="text-muted">Active Loans</div>
+
+                    <div class="display-6 fw-bold text-primary">
+                        @Model.ActiveLoans
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-xl-3">
+            <div class="card shadow-sm h-100 border-danger">
+                <div class="card-body">
+                    <div class="text-muted">Overdue Loans</div>
+
+                    <div class="display-6 fw-bold text-danger">
+                        @Model.OverdueLoans
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-xl-3">
+            <div class="card shadow-sm h-100 border-success">
+                <div class="card-body">
+                    <div class="text-muted">Returned Loans</div>
+
+                    <div class="display-6 fw-bold text-success">
+                        @Model.ReturnedLoans
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-2">
+                <span>Loan return rate</span>
+
+                <strong>
+                    @Model.ReturnPercentage.ToString("0.0")%
+                </strong>
+            </div>
+
+            <div class="progress"
+                 style="height: 12px;">
+
+                <div class="progress-bar bg-success"
+                     style="width: @returnWidth"
+                     role="progressbar">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="mb-5">
+    <h2 class="h4 mb-3">Item Status Statistics</h2>
+
+    <div class="row g-3">
+        <div class="col-6 col-lg">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">Total Items</div>
+                    <div class="h2 mb-0">@Model.TotalItems</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">Available</div>
+
+                    <div class="h2 text-success mb-0">
+                        @Model.AvailableItems
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">Borrowed</div>
+
+                    <div class="h2 text-primary mb-0">
+                        @Model.BorrowedItems
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">Damaged</div>
+
+                    <div class="h2 text-warning mb-0">
+                        @Model.DamagedItems
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">Destroyed</div>
+
+                    <div class="h2 text-danger mb-0">
+                        @Model.DestroyedItems
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-2">
+                <span>Item availability</span>
+
+                <strong>
+                    @Model.AvailabilityPercentage.ToString("0.0")%
+                </strong>
+            </div>
+
+            <div class="progress"
+                 style="height: 12px;">
+
+                <div class="progress-bar bg-primary"
+                     style="width: @availabilityWidth"
+                     role="progressbar">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="mb-5">
+    <h2 class="h4 mb-3">Item Types</h2>
+
+    <div class="row g-3">
+        <div class="col-12 col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="display-6 fw-bold">
+                        @Model.TotalBooks
+                    </div>
+
+                    <div class="text-muted">Books</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="display-6 fw-bold">
+                        @Model.TotalMusicItems
+                    </div>
+
+                    <div class="text-muted">Music Items</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="display-6 fw-bold">
+                        @Model.TotalToys
+                    </div>
+
+                    <div class="text-muted">Toys</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="mb-5">
+    <h2 class="h4 mb-3">Fine Statistics</h2>
+
+    <div class="row g-3">
+        <div class="col-6 col-xl-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">
+                        Total Charged
+                    </div>
+
+                    <div class="h2 mb-0">
+                        @Model.TotalFinesCharged.ToString("C")
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-xl-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">
+                        Fines Paid
+                    </div>
+
+                    <div class="h2 text-success mb-0">
+                        @Model.PaidFines.ToString("C")
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-xl-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">
+                        Outstanding
+                    </div>
+
+                    <div class="h2 text-danger mb-0">
+                        @Model.OutstandingFines.ToString("C")
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-xl-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">
+                        Unpaid Fine Records
+                    </div>
+
+                    <div class="h2 text-warning mb-0">
+                        @Model.UnpaidFineCount
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section>
+    <h2 class="h4 mb-3">Borrower Statistics</h2>
+
+    <div class="row g-3">
+        <div class="col-12 col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted">
+                        Total Registered Borrowers
+                    </div>
+
+                    <div class="display-6 fw-bold">
+                        @Model.TotalBorrowers
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted">
+                        Active Borrowers
+                    </div>
+
+                    <div class="display-6 fw-bold text-success">
+                        @Model.ActiveBorrowers
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

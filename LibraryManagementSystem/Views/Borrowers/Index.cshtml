@@ -1,0 +1,210 @@
+@model IEnumerable<LibraryManagementSystem.Models.Borrower>
+
+@{
+    ViewData["Title"] = "Manage Borrowers";
+
+    string? searchTerm = ViewData["SearchTerm"]?.ToString();
+    string? selectedStatus = ViewData["IsActive"]?.ToString();
+}
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <h1 class="display-5 fw-bold mb-1">Manage Borrowers</h1>
+        <p class="text-muted mb-0">
+            Register, search and manage library borrowers.
+        </p>
+    </div>
+
+    <a asp-action="Create" class="btn btn-primary">
+        Register Borrower
+    </a>
+</div>
+
+@if (TempData["SuccessMessage"] is not null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close">
+        </button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] is not null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close">
+        </button>
+    </div>
+}
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form asp-action="Index" method="get">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-6">
+                    <label for="searchTerm" class="form-label">
+                        Search
+                    </label>
+
+                    <input id="searchTerm"
+                           name="searchTerm"
+                           value="@searchTerm"
+                           class="form-control"
+                           placeholder="Search by code, name, email or phone" />
+                </div>
+
+                <div class="col-lg-3">
+                    <label for="isActive" class="form-label">
+                        Membership Status
+                    </label>
+
+                    <select id="isActive"
+                            name="isActive"
+                            class="form-select">
+
+                        <option value="">All borrowers</option>
+
+                        @if (selectedStatus == bool.TrueString)
+                        {
+                            <option value="true" selected>Active</option>
+                        }
+                        else
+                        {
+                            <option value="true">Active</option>
+                        }
+
+                        @if (selectedStatus == bool.FalseString)
+                        {
+                            <option value="false" selected>Inactive</option>
+                        }
+                        else
+                        {
+                            <option value="false">Inactive</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-lg-2 d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        Search
+                    </button>
+                </div>
+
+                <div class="col-lg-1 d-grid">
+                    <a asp-action="Index"
+                       class="btn btn-outline-secondary">
+                        Clear
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.Any())
+{
+    <div class="table-responsive rounded border shadow-sm">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Borrower Code</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Registered</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var borrower in Model)
+                {
+                    <tr>
+                        <td class="fw-semibold">
+                            @borrower.BorrowerCode
+                        </td>
+
+                        <td>@borrower.FullName</td>
+                        <td>@borrower.Email</td>
+                        <td>@borrower.PhoneNumber</td>
+
+                        <td>
+                            @borrower.RegistrationDate
+                            .ToLocalTime()
+                            .ToString("dd MMM yyyy")
+                        </td>
+
+                        <td>
+                            @if (borrower.IsActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inactive</span>
+                            }
+                        </td>
+
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm"
+                                 role="group"
+                                 aria-label="Borrower actions">
+
+                                <a asp-action="Details"
+                                   asp-route-id="@borrower.Id"
+                                   class="btn btn-outline-info">
+                                    Details
+                                </a>
+
+                                <a asp-action="Edit"
+                                   asp-route-id="@borrower.Id"
+                                   class="btn btn-outline-primary">
+                                    Edit
+                                </a>
+
+                                <a asp-action="Delete"
+                                   asp-route-id="@borrower.Id"
+                                   class="btn btn-outline-danger">
+                                    Delete
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="card border-primary shadow-sm">
+        <div class="card-body text-center py-5">
+            <h2 class="h4">No borrowers found</h2>
+
+            <p class="text-muted">
+                Try changing the search filters or register a borrower.
+            </p>
+
+            <a asp-action="Create" class="btn btn-primary">
+                Register Borrower
+            </a>
+        </div>
+    </div>
+}
+
+<div class="mt-4">
+    <a asp-controller="Reception"
+       asp-action="Index">
+        Back to Reception Dashboard
+    </a>
+</div>
