@@ -1,0 +1,243 @@
+@using LibraryManagementSystem.Models
+@model LibraryManagementSystem.ViewModels.HoldsIndexViewModel
+
+@{
+    ViewData["Title"] = "Reservations";
+}
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h1 class="mb-1">Reservations</h1>
+        <p class="text-muted mb-0">
+            Holds on borrowed or damaged items. The first borrower in the queue is notified when the item is ready.
+        </p>
+    </div>
+
+    @if (User.IsInRole(RoleNames.Reception))
+    {
+        <a asp-action="Place"
+           class="btn btn-primary">
+            Place Hold
+        </a>
+    }
+</div>
+
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success alert-dismissible fade show"
+         role="alert">
+        @successMessage
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close">
+        </button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-danger alert-dismissible fade show"
+         role="alert">
+        @errorMessage
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close">
+        </button>
+    </div>
+}
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form asp-action="Index"
+              method="get"
+              class="row g-3 align-items-end">
+
+            <div class="col-12 col-lg-6">
+                <label for="searchTerm"
+                       class="form-label">
+                    Search
+                </label>
+
+                <input id="searchTerm"
+                       name="searchTerm"
+                       value="@Model.SearchTerm"
+                       class="form-control"
+                       placeholder="Item code, item name, borrower code or borrower name" />
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <label for="status"
+                       class="form-label">
+                    Hold Status
+                </label>
+
+                <select id="status"
+                        name="status"
+                        class="form-select">
+
+                    <option value="Active"
+                            selected="@(Model.SelectedStatus == "Active")">
+                        Active (waiting or ready)
+                    </option>
+
+                    <option value="Waiting"
+                            selected="@(Model.SelectedStatus == "Waiting")">
+                        Waiting
+                    </option>
+
+                    <option value="Ready"
+                            selected="@(Model.SelectedStatus == "Ready")">
+                        Ready
+                    </option>
+
+                    <option value="Collected"
+                            selected="@(Model.SelectedStatus == "Collected")">
+                        Collected
+                    </option>
+
+                    <option value="Expired"
+                            selected="@(Model.SelectedStatus == "Expired")">
+                        Expired
+                    </option>
+
+                    <option value="Cancelled"
+                            selected="@(Model.SelectedStatus == "Cancelled")">
+                        Cancelled
+                    </option>
+
+                    <option value="All"
+                            selected="@(Model.SelectedStatus == "All")">
+                        All holds
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="d-flex gap-2">
+                    <button type="submit"
+                            class="btn btn-primary flex-grow-1">
+                        Search
+                    </button>
+
+                    <a asp-action="Index"
+                       class="btn btn-outline-secondary">
+                        Clear
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (!Model.Holds.Any())
+{
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+            <h2 class="h4">No holds found</h2>
+
+            <p class="text-muted mb-0">
+                Change the search filters, or place a hold on a borrowed or damaged item.
+            </p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <caption class="visually-hidden">
+                    Reservation queue with each borrower's position
+                </caption>
+
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Item</th>
+                        <th scope="col">Borrower</th>
+                        <th scope="col">Queue position</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Placed</th>
+                        <th scope="col">Collect by</th>
+                        <th scope="col"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var hold in Model.Holds)
+                    {
+                        string statusColour = hold.Status switch
+                        {
+                            ReservationStatus.Waiting => "bg-primary",
+                            ReservationStatus.Ready => "bg-success",
+                            ReservationStatus.Expired => "bg-warning text-dark",
+                            _ => "bg-secondary"
+                        };
+
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">@hold.ItemName</div>
+                                <div class="text-muted small">@hold.LibraryCode</div>
+                            </td>
+
+                            <td>
+                                <div>@hold.BorrowerName</div>
+                                <div class="text-muted small">@hold.BorrowerCode</div>
+                            </td>
+
+                            <td>
+                                @if (hold.Position.HasValue)
+                                {
+                                    @:#@hold.Position
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Closed</span>
+                                }
+                            </td>
+
+                            <td>
+                                <span class="badge @statusColour">
+                                    @hold.Status
+                                </span>
+                            </td>
+
+                            <td>@hold.CreatedAt.ToLocalTime().ToString("d MMM yyyy")</td>
+
+                            <td>
+                                @if (hold.Status == ReservationStatus.Ready && hold.ExpiresAt.HasValue)
+                                {
+                                    @hold.ExpiresAt.Value.ToLocalTime().ToString("d MMM yyyy")
+                                }
+                                else
+                                {
+                                    <span class="text-muted">None</span>
+                                }
+                            </td>
+
+                            <td class="text-end">
+                                @if (hold.IsActive && User.IsInRole(RoleNames.Reception))
+                                {
+                                    <form asp-action="Cancel"
+                                          asp-route-id="@hold.ReservationId"
+                                          method="post"
+                                          class="d-inline">
+
+                                        <button type="submit"
+                                                class="btn btn-sm btn-outline-danger"
+                                                aria-label="Cancel hold on @hold.ItemName for @hold.BorrowerName">
+                                            Cancel hold
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

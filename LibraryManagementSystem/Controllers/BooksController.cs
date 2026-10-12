@@ -1,5 +1,6 @@
 using LibraryManagementSystem.Data;
 using LibraryManagementSystem.Models;
+using LibraryManagementSystem.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +11,14 @@ namespace LibraryManagementSystem.Controllers
     public class BooksController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IReservationService _reservations;
 
-        public BooksController(ApplicationDbContext context)
+        public BooksController(
+            ApplicationDbContext context,
+            IReservationService reservations)
         {
             _context = context;
+            _reservations = reservations;
         }
 
         // GET: Books
@@ -202,6 +207,9 @@ namespace LibraryManagementSystem.Controllers
             existingBook.Name = submittedBook.Name;
             existingBook.Description = submittedBook.Description;
             existingBook.LibraryCode = submittedBook.LibraryCode;
+            // Remember the old status so reservations can react to a repair.
+            ItemStatus oldStatus = existingBook.Status;
+
             existingBook.Status = submittedBook.Status;
             existingBook.Author = submittedBook.Author;
             existingBook.Genre = submittedBook.Genre;
@@ -211,6 +219,11 @@ namespace LibraryManagementSystem.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+
+                await _reservations.OnItemStatusChangedAsync(
+                    existingBook.Id,
+                    oldStatus,
+                    existingBook.Status);
 
                 TempData["SuccessMessage"] =
                     $"The book \"{existingBook.Name}\" was updated successfully.";

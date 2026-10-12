@@ -1,5 +1,6 @@
 using LibraryManagementSystem.Data;
 using LibraryManagementSystem.Models;
+using LibraryManagementSystem.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +11,14 @@ namespace LibraryManagementSystem.Controllers
     public class ToysController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IReservationService _reservations;
 
-        public ToysController(ApplicationDbContext context)
+        public ToysController(
+            ApplicationDbContext context,
+            IReservationService reservations)
         {
             _context = context;
+            _reservations = reservations;
         }
 
         // Displays toys with optional search and status filtering.
@@ -150,6 +155,9 @@ namespace LibraryManagementSystem.Controllers
                 return NotFound();
             }
 
+            // Remember the old status so reservations can react to a repair.
+            ItemStatus oldStatus = toyToUpdate.Status;
+
             if (await TryUpdateModelAsync(
                 toyToUpdate,
                 string.Empty,
@@ -179,6 +187,11 @@ namespace LibraryManagementSystem.Controllers
                     try
                     {
                         await _context.SaveChangesAsync();
+
+                        await _reservations.OnItemStatusChangedAsync(
+                            toyToUpdate.Id,
+                            oldStatus,
+                            toyToUpdate.Status);
 
                         TempData["SuccessMessage"] =
                             $"The toy \"{toyToUpdate.Name}\" was updated successfully.";

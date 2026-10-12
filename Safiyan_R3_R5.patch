@@ -1,0 +1,2624 @@
+diff --git a/LibraryManagementSystem/Controllers/BooksController.cs b/LibraryManagementSystem/Controllers/BooksController.cs
+index e04b547..29e1a19 100644
+--- a/LibraryManagementSystem/Controllers/BooksController.cs
++++ b/LibraryManagementSystem/Controllers/BooksController.cs
+@@ -1,5 +1,6 @@
+ using LibraryManagementSystem.Data;
+ using LibraryManagementSystem.Models;
++using LibraryManagementSystem.Services;
+ using Microsoft.AspNetCore.Authorization;
+ using Microsoft.AspNetCore.Mvc;
+ using Microsoft.EntityFrameworkCore;
+@@ -10,10 +11,14 @@ namespace LibraryManagementSystem.Controllers
+     public class BooksController : Controller
+     {
+         private readonly ApplicationDbContext _context;
++        private readonly IReservationService _reservations;
+ 
+-        public BooksController(ApplicationDbContext context)
++        public BooksController(
++            ApplicationDbContext context,
++            IReservationService reservations)
+         {
+             _context = context;
++            _reservations = reservations;
+         }
+ 
+         // GET: Books
+@@ -202,6 +207,9 @@ namespace LibraryManagementSystem.Controllers
+             existingBook.Name = submittedBook.Name;
+             existingBook.Description = submittedBook.Description;
+             existingBook.LibraryCode = submittedBook.LibraryCode;
++            // Remember the old status so reservations can react to a repair.
++            ItemStatus oldStatus = existingBook.Status;
++
+             existingBook.Status = submittedBook.Status;
+             existingBook.Author = submittedBook.Author;
+             existingBook.Genre = submittedBook.Genre;
+@@ -212,6 +220,11 @@ namespace LibraryManagementSystem.Controllers
+             {
+                 await _context.SaveChangesAsync();
+ 
++                await _reservations.OnItemStatusChangedAsync(
++                    existingBook.Id,
++                    oldStatus,
++                    existingBook.Status);
++
+                 TempData["SuccessMessage"] =
+                     $"The book \"{existingBook.Name}\" was updated successfully.";
+ 
+diff --git a/LibraryManagementSystem/Controllers/HoldsController.cs b/LibraryManagementSystem/Controllers/HoldsController.cs
+new file mode 100644
+index 0000000..6182243
+--- /dev/null
++++ b/LibraryManagementSystem/Controllers/HoldsController.cs
+@@ -0,0 +1,167 @@
++using LibraryManagementSystem.Data;
++using LibraryManagementSystem.Models;
++using LibraryManagementSystem.Services;
++using LibraryManagementSystem.ViewModels;
++using Microsoft.AspNetCore.Authorization;
++using Microsoft.AspNetCore.Mvc;
++using Microsoft.EntityFrameworkCore;
++
++namespace LibraryManagementSystem.Controllers
++{
++    // Reservation queue (R5). Reception manages holds; Managers can view them.
++    [Authorize(Roles = RoleNames.Reception + "," + RoleNames.Manager)]
++    public class HoldsController : Controller
++    {
++        private readonly ApplicationDbContext _context;
++        private readonly IReservationService _reservations;
++
++        public HoldsController(
++            ApplicationDbContext context,
++            IReservationService reservations)
++        {
++            _context = context;
++            _reservations = reservations;
++        }
++
++        // Lists holds with each borrower's queue position.
++        public async Task<IActionResult> Index(
++            string? searchTerm,
++            string? status)
++        {
++            status = string.IsNullOrWhiteSpace(status) ? "Active" : status;
++
++            IQueryable<Reservation> query = _context.Reservations
++                .AsNoTracking()
++                .Include(hold => hold.Item)
++                .Include(hold => hold.Borrower);
++
++            if (!string.IsNullOrWhiteSpace(searchTerm))
++            {
++                searchTerm = searchTerm.Trim();
++
++                query = query.Where(hold =>
++                    hold.Item.LibraryCode.Contains(searchTerm) ||
++                    hold.Item.Name.Contains(searchTerm) ||
++                    hold.Borrower.BorrowerCode.Contains(searchTerm) ||
++                    hold.Borrower.FullName.Contains(searchTerm));
++            }
++
++            if (status == "Active")
++            {
++                query = query.Where(hold =>
++                    hold.Status == ReservationStatus.Waiting ||
++                    hold.Status == ReservationStatus.Ready);
++            }
++            else if (Enum.TryParse(status, true, out ReservationStatus selected))
++            {
++                query = query.Where(hold => hold.Status == selected);
++            }
++            else
++            {
++                status = "All";
++            }
++
++            List<Reservation> holds = await query
++                .OrderBy(hold => hold.ItemId)
++                .ThenBy(hold => hold.CreatedAt)
++                .ThenBy(hold => hold.Id)
++                .ToListAsync();
++
++            // Queue position among ALL active holds on the same item, so a filtered
++            // list still shows the true position.
++            var activeOrder = await _context.Reservations
++                .AsNoTracking()
++                .Where(hold =>
++                    hold.Status == ReservationStatus.Waiting ||
++                    hold.Status == ReservationStatus.Ready)
++                .OrderBy(hold => hold.CreatedAt)
++                .ThenBy(hold => hold.Id)
++                .Select(hold => new { hold.Id, hold.ItemId })
++                .ToListAsync();
++
++            Dictionary<int, int> positions = new();
++
++            foreach (var group in activeOrder.GroupBy(hold => hold.ItemId))
++            {
++                int position = 1;
++
++                foreach (var hold in group)
++                {
++                    positions[hold.Id] = position++;
++                }
++            }
++
++            HoldsIndexViewModel model = new()
++            {
++                SearchTerm = searchTerm ?? string.Empty,
++                SelectedStatus = status,
++                Holds = holds.Select(hold => new HoldRowViewModel
++                {
++                    ReservationId = hold.Id,
++                    ItemName = hold.Item.Name,
++                    LibraryCode = hold.Item.LibraryCode,
++                    BorrowerName = hold.Borrower.FullName,
++                    BorrowerCode = hold.Borrower.BorrowerCode,
++                    Status = hold.Status,
++                    Position = positions.TryGetValue(hold.Id, out int p) ? p : null,
++                    CreatedAt = hold.CreatedAt,
++                    ExpiresAt = hold.ExpiresAt
++                }).ToList()
++            };
++
++            return View(model);
++        }
++
++        [HttpGet]
++        [Authorize(Roles = RoleNames.Reception)]
++        public IActionResult Place()
++        {
++            return View(new PlaceHoldViewModel());
++        }
++
++        [HttpPost]
++        [ValidateAntiForgeryToken]
++        [Authorize(Roles = RoleNames.Reception)]
++        public async Task<IActionResult> Place(PlaceHoldViewModel model)
++        {
++            if (!ModelState.IsValid)
++            {
++                return View(model);
++            }
++
++            HoldResult result = await _reservations.PlaceHoldAsync(
++                model.LibraryCode,
++                model.BorrowerCode,
++                User.Identity?.Name ?? "Unknown Reception User");
++
++            if (!result.Succeeded)
++            {
++                ModelState.AddModelError(string.Empty, result.Message);
++                return View(model);
++            }
++
++            TempData["SuccessMessage"] = result.Message;
++
++            return RedirectToAction(nameof(Index));
++        }
++
++        [HttpPost]
++        [ValidateAntiForgeryToken]
++        [Authorize(Roles = RoleNames.Reception)]
++        public async Task<IActionResult> Cancel(int id)
++        {
++            HoldResult result = await _reservations.CancelHoldAsync(id);
++
++            if (result.Succeeded)
++            {
++                TempData["SuccessMessage"] = result.Message;
++            }
++            else
++            {
++                TempData["ErrorMessage"] = result.Message;
++            }
++
++            return RedirectToAction(nameof(Index));
++        }
++    }
++}
+diff --git a/LibraryManagementSystem/Controllers/LoansController.cs b/LibraryManagementSystem/Controllers/LoansController.cs
+index 3ae8546..56c8ec8 100644
+--- a/LibraryManagementSystem/Controllers/LoansController.cs
++++ b/LibraryManagementSystem/Controllers/LoansController.cs
+@@ -13,13 +13,19 @@ namespace LibraryManagementSystem.Controllers
+     {
+         private readonly ApplicationDbContext _context;
+         private readonly IFineCalculator _fineCalculator;
++        private readonly IReservationService _reservations;
++        private readonly INotificationService _notifications;
+ 
+         public LoansController(
+             ApplicationDbContext context,
+-            IFineCalculator fineCalculator)
++            IFineCalculator fineCalculator,
++            IReservationService reservations,
++            INotificationService notifications)
+         {
+             _context = context;
+             _fineCalculator = fineCalculator;
++            _reservations = reservations;
++            _notifications = notifications;
+         }
+ 
+         // Displays active, overdue and returned loans.
+@@ -150,7 +156,10 @@ namespace LibraryManagementSystem.Controllers
+                 return View(model);
+             }
+ 
+-            if (item.Status != ItemStatus.Available)
++            // A Reserved item can still be issued, but only to the borrower
++            // whose hold is Ready (checked below).
++            if (item.Status != ItemStatus.Available &&
++                item.Status != ItemStatus.Reserved)
+             {
+                 ModelState.AddModelError(
+                     nameof(model.LibraryCode),
+@@ -182,6 +191,21 @@ namespace LibraryManagementSystem.Controllers
+                 return View(model);
+             }
+ 
++            BorrowCheck borrowCheck =
++                await _reservations.CheckBorrowAllowedAsync(
++                    item.Id,
++                    borrower.Id);
++
++            if (!borrowCheck.Allowed)
++            {
++                ModelState.AddModelError(
++                    nameof(model.LibraryCode),
++                    borrowCheck.Reason ??
++                    "This item is being held for another borrower.");
++
++                return View(model);
++            }
++
+             bool alreadyBorrowed = await _context.Loans
+                 .AnyAsync(loan =>
+                     loan.ItemId == item.Id &&
+@@ -215,10 +239,16 @@ namespace LibraryManagementSystem.Controllers
+ 
+                 item.Status = ItemStatus.Borrowed;
+ 
++                // If this borrower was holding the item, close their hold.
++                await _reservations.MarkCollectedAsync(item.Id, borrower.Id);
++
+                 _context.Loans.Add(loan);
+                 await _context.SaveChangesAsync();
+                 await transaction.CommitAsync();
+ 
++                // Simulated email: logged after the loan is saved.
++                await _notifications.NotifyBorrowedAsync(loan.Id);
++
+                 TempData["SuccessMessage"] =
+                     $"\"{item.Name}\" was issued to {borrower.FullName} successfully.";
+ 
+@@ -297,8 +327,29 @@ namespace LibraryManagementSystem.Controllers
+                 await _context.SaveChangesAsync();
+                 await transaction.CommitAsync();
+ 
++                // Give the item to the first borrower in the queue, if any.
++                Reservation? promotedHold = null;
++
++                try
++                {
++                    promotedHold =
++                        await _reservations.OnItemAvailableAsync(
++                            activeLoan.ItemId);
++                }
++                catch (DbUpdateException)
++                {
++                    // The return is saved. The scheduled check will retry the allocation.
++                    TempData["ErrorMessage"] =
++                        "The item was returned, but its reservation queue " +
++                        "could not be updated yet. It will be retried automatically.";
++                }
++
+                 if (fine > 0)
+                 {
++                    // Simulated email and SMS for the assessed (unpaid) fine.
++                    await _notifications.NotifyFineAssessedAsync(
++                        activeLoan.Id);
++
+                     TempData["SuccessMessage"] =
+                         $"\"{activeLoan.Item.Name}\" was returned. " +
+                         $"Late fine: {fine:C}.";
+@@ -310,6 +361,12 @@ namespace LibraryManagementSystem.Controllers
+                         "No late fine was charged.";
+                 }
+ 
++                if (promotedHold != null)
++                {
++                    TempData["SuccessMessage"] +=
++                        " It is now being held for the next borrower in the queue.";
++                }
++
+                 return RedirectToAction(nameof(Index));
+             }
+             catch (DbUpdateException)
+diff --git a/LibraryManagementSystem/Controllers/MusicsController.cs b/LibraryManagementSystem/Controllers/MusicsController.cs
+index b571c1d..abc55be 100644
+--- a/LibraryManagementSystem/Controllers/MusicsController.cs
++++ b/LibraryManagementSystem/Controllers/MusicsController.cs
+@@ -1,5 +1,6 @@
+ using LibraryManagementSystem.Data;
+ using LibraryManagementSystem.Models;
++using LibraryManagementSystem.Services;
+ using Microsoft.AspNetCore.Authorization;
+ using Microsoft.AspNetCore.Mvc;
+ using Microsoft.EntityFrameworkCore;
+@@ -10,10 +11,14 @@ namespace LibraryManagementSystem.Controllers
+     public class MusicsController : Controller
+     {
+         private readonly ApplicationDbContext _context;
++        private readonly IReservationService _reservations;
+ 
+-        public MusicsController(ApplicationDbContext context)
++        public MusicsController(
++            ApplicationDbContext context,
++            IReservationService reservations)
+         {
+             _context = context;
++            _reservations = reservations;
+         }
+ 
+         // Displays music items and supports searching and filtering.
+@@ -151,6 +156,9 @@ namespace LibraryManagementSystem.Controllers
+                 return NotFound();
+             }
+ 
++            // Remember the old status so reservations can react to a repair.
++            ItemStatus oldStatus = musicToUpdate.Status;
++
+             if (await TryUpdateModelAsync(
+                 musicToUpdate,
+                 string.Empty,
+@@ -181,6 +189,11 @@ namespace LibraryManagementSystem.Controllers
+                     {
+                         await _context.SaveChangesAsync();
+ 
++                        await _reservations.OnItemStatusChangedAsync(
++                            musicToUpdate.Id,
++                            oldStatus,
++                            musicToUpdate.Status);
++
+                         TempData["SuccessMessage"] =
+                             $"The music item \"{musicToUpdate.Name}\" was updated successfully.";
+ 
+diff --git a/LibraryManagementSystem/Controllers/NotificationsController.cs b/LibraryManagementSystem/Controllers/NotificationsController.cs
+new file mode 100644
+index 0000000..529f70e
+--- /dev/null
++++ b/LibraryManagementSystem/Controllers/NotificationsController.cs
+@@ -0,0 +1,88 @@
++using LibraryManagementSystem.Data;
++using LibraryManagementSystem.Models;
++using LibraryManagementSystem.Services;
++using LibraryManagementSystem.ViewModels;
++using Microsoft.AspNetCore.Authorization;
++using Microsoft.AspNetCore.Mvc;
++using Microsoft.EntityFrameworkCore;
++
++namespace LibraryManagementSystem.Controllers
++{
++    // Simulated email / SMS log (R3). Patrons never see this page.
++    [Authorize(Roles = RoleNames.Reception + "," + RoleNames.Manager)]
++    public class NotificationsController : Controller
++    {
++        private readonly ApplicationDbContext _context;
++        private readonly INotificationService _notifications;
++
++        public NotificationsController(
++            ApplicationDbContext context,
++            INotificationService notifications)
++        {
++            _context = context;
++            _notifications = notifications;
++        }
++
++        public async Task<IActionResult> Index(
++            string? searchTerm,
++            string? channel,
++            string? eventType)
++        {
++            IQueryable<NotificationLog> query = _context.NotificationLogs
++                .AsNoTracking()
++                .Include(notification => notification.Borrower);
++
++            if (!string.IsNullOrWhiteSpace(searchTerm))
++            {
++                searchTerm = searchTerm.Trim();
++
++                query = query.Where(notification =>
++                    notification.Borrower.BorrowerCode.Contains(searchTerm) ||
++                    notification.Borrower.FullName.Contains(searchTerm) ||
++                    notification.Recipient.Contains(searchTerm) ||
++                    notification.Subject.Contains(searchTerm));
++            }
++
++            if (Enum.TryParse(channel, true, out NotificationChannel selectedChannel))
++            {
++                query = query.Where(notification => notification.Channel == selectedChannel);
++            }
++
++            if (Enum.TryParse(eventType, true, out NotificationEventType selectedEvent))
++            {
++                query = query.Where(notification => notification.EventType == selectedEvent);
++            }
++
++            int total = await query.CountAsync();
++
++            List<NotificationLog> rows = await query
++                .OrderByDescending(notification => notification.CreatedAt)
++                .ThenByDescending(notification => notification.Id)
++                .Take(200)
++                .ToListAsync();
++
++            return View(new NotificationsIndexViewModel
++            {
++                Notifications = rows,
++                SearchTerm = searchTerm ?? string.Empty,
++                SelectedChannel = channel ?? string.Empty,
++                SelectedEvent = eventType ?? string.Empty,
++                TotalMatching = total
++            });
++        }
++
++        // Runs the same checks as the background job, for demos and testing.
++        [HttpPost]
++        [ValidateAntiForgeryToken]
++        public async Task<IActionResult> RunChecks()
++        {
++            int created = await _notifications.RunScheduledChecksAsync();
++
++            TempData["SuccessMessage"] = created == 0
++                ? "Checks finished. No new reminders were needed."
++                : $"Checks finished. {created} new message(s) were logged.";
++
++            return RedirectToAction(nameof(Index));
++        }
++    }
++}
+diff --git a/LibraryManagementSystem/Controllers/ToysController.cs b/LibraryManagementSystem/Controllers/ToysController.cs
+index 92a3732..d82934f 100644
+--- a/LibraryManagementSystem/Controllers/ToysController.cs
++++ b/LibraryManagementSystem/Controllers/ToysController.cs
+@@ -1,5 +1,6 @@
+ using LibraryManagementSystem.Data;
+ using LibraryManagementSystem.Models;
++using LibraryManagementSystem.Services;
+ using Microsoft.AspNetCore.Authorization;
+ using Microsoft.AspNetCore.Mvc;
+ using Microsoft.EntityFrameworkCore;
+@@ -10,10 +11,14 @@ namespace LibraryManagementSystem.Controllers
+     public class ToysController : Controller
+     {
+         private readonly ApplicationDbContext _context;
++        private readonly IReservationService _reservations;
+ 
+-        public ToysController(ApplicationDbContext context)
++        public ToysController(
++            ApplicationDbContext context,
++            IReservationService reservations)
+         {
+             _context = context;
++            _reservations = reservations;
+         }
+ 
+         // Displays toys with optional search and status filtering.
+@@ -150,6 +155,9 @@ namespace LibraryManagementSystem.Controllers
+                 return NotFound();
+             }
+ 
++            // Remember the old status so reservations can react to a repair.
++            ItemStatus oldStatus = toyToUpdate.Status;
++
+             if (await TryUpdateModelAsync(
+                 toyToUpdate,
+                 string.Empty,
+@@ -180,6 +188,11 @@ namespace LibraryManagementSystem.Controllers
+                     {
+                         await _context.SaveChangesAsync();
+ 
++                        await _reservations.OnItemStatusChangedAsync(
++                            toyToUpdate.Id,
++                            oldStatus,
++                            toyToUpdate.Status);
++
+                         TempData["SuccessMessage"] =
+                             $"The toy \"{toyToUpdate.Name}\" was updated successfully.";
+ 
+diff --git a/LibraryManagementSystem/Data/ApplicationDbContext.cs b/LibraryManagementSystem/Data/ApplicationDbContext.cs
+index 87e0441..f429fa6 100644
+--- a/LibraryManagementSystem/Data/ApplicationDbContext.cs
++++ b/LibraryManagementSystem/Data/ApplicationDbContext.cs
+@@ -20,6 +20,10 @@ namespace LibraryManagementSystem.Data
+ 
+         public DbSet<Loan> Loans { get; set; } = default!;
+ 
++        public DbSet<Reservation> Reservations { get; set; } = default!;
++
++        public DbSet<NotificationLog> NotificationLogs { get; set; } = default!;
++
+         protected override void OnModelCreating(ModelBuilder builder)
+         {
+             base.OnModelCreating(builder);
+@@ -99,6 +103,69 @@ namespace LibraryManagementSystem.Data
+             // Improves borrower loan-history searches.
+             builder.Entity<Loan>()
+                 .HasIndex(loan => loan.BorrowerId);
++
++            // ---- R5 Reservations ----
++            builder.Entity<Reservation>()
++                .HasOne(reservation => reservation.Item)
++                .WithMany()
++                .HasForeignKey(reservation => reservation.ItemId)
++                .OnDelete(DeleteBehavior.Restrict);
++
++            builder.Entity<Reservation>()
++                .HasOne(reservation => reservation.Borrower)
++                .WithMany()
++                .HasForeignKey(reservation => reservation.BorrowerId)
++                .OnDelete(DeleteBehavior.Restrict);
++
++            // Store the hold status as readable text, like ItemStatus.
++            builder.Entity<Reservation>()
++                .Property(reservation => reservation.Status)
++                .HasConversion<string>()
++                .HasMaxLength(20);
++
++            // A borrower can have only one active hold on an item.
++            builder.Entity<Reservation>()
++                .HasIndex(reservation => new
++                {
++                    reservation.ItemId,
++                    reservation.BorrowerId
++                })
++                .IsUnique()
++                .HasFilter("[Status] IN ('Waiting', 'Ready')");
++
++            // Speeds up queue lookups for an item.
++            builder.Entity<Reservation>()
++                .HasIndex(reservation => new
++                {
++                    reservation.ItemId,
++                    reservation.Status,
++                    reservation.CreatedAt
++                });
++
++            // ---- R3 Notifications ----
++            builder.Entity<NotificationLog>()
++                .HasOne(notification => notification.Borrower)
++                .WithMany()
++                .HasForeignKey(notification => notification.BorrowerId)
++                .OnDelete(DeleteBehavior.Cascade);
++
++            builder.Entity<NotificationLog>()
++                .Property(notification => notification.Channel)
++                .HasConversion<string>()
++                .HasMaxLength(10);
++
++            builder.Entity<NotificationLog>()
++                .Property(notification => notification.EventType)
++                .HasConversion<string>()
++                .HasMaxLength(20);
++
++            // Stops the same message being logged twice.
++            builder.Entity<NotificationLog>()
++                .HasIndex(notification => notification.DedupKey)
++                .IsUnique();
++
++            builder.Entity<NotificationLog>()
++                .HasIndex(notification => notification.CreatedAt);
+         }
+     }
+ }
+\ No newline at end of file
+diff --git a/LibraryManagementSystem/Data/ReservationDemoSeeder.cs b/LibraryManagementSystem/Data/ReservationDemoSeeder.cs
+new file mode 100644
+index 0000000..1fe21a4
+--- /dev/null
++++ b/LibraryManagementSystem/Data/ReservationDemoSeeder.cs
+@@ -0,0 +1,142 @@
++using LibraryManagementSystem.Models;
++using Microsoft.EntityFrameworkCore;
++
++namespace LibraryManagementSystem.Data
++{
++    // Optional demo data for testing reservations (R5) and notifications (R3).
++    // Turn it on with  "DemoData": { "SeedReservationScenario": true }  in appsettings,
++    // or the environment variable  DemoData__SeedReservationScenario=true.
++    // Safe to run more than once: it only adds records that are missing.
++    public static class ReservationDemoSeeder
++    {
++        public static async Task SeedAsync(IServiceProvider serviceProvider)
++        {
++            using IServiceScope scope = serviceProvider.CreateScope();
++
++            ApplicationDbContext context =
++                scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
++
++            Borrower one = await GetOrAddBorrowerAsync(
++                context, "BR-DEMO1", "Demo Borrower One", "demo1@example.com", "0400000001");
++
++            Borrower two = await GetOrAddBorrowerAsync(
++                context, "BR-DEMO2", "Demo Borrower Two", "demo2@example.com", "0400000002");
++
++            await GetOrAddBorrowerAsync(
++                context, "BR-DEMO3", "Demo Borrower Three", "demo3@example.com", "0400000003");
++
++            // R5: a borrowed item to queue on, and a damaged item to repair.
++            Book queueBook = await GetOrAddBookAsync(
++                context, "BK-R5-01", "Reservation Queue Test Book", ItemStatus.Borrowed);
++
++            await GetOrAddBookAsync(
++                context, "BK-R5-02", "Damaged Reservation Test Book", ItemStatus.Damaged);
++
++            // R3: one loan due in 2 days and one that is 5 days overdue.
++            Book dueSoonBook = await GetOrAddBookAsync(
++                context, "BK-R3-DUE", "Due Soon Reminder Test Book", ItemStatus.Borrowed);
++
++            Book overdueBook = await GetOrAddBookAsync(
++                context, "BK-R3-OVER", "Overdue Fine Test Book", ItemStatus.Borrowed);
++
++            await context.SaveChangesAsync();
++
++            await AddActiveLoanIfMissingAsync(
++                context, queueBook, one, DateTime.Today.AddDays(-4), DateTime.Today.AddDays(10));
++
++            await AddActiveLoanIfMissingAsync(
++                context, dueSoonBook, one, DateTime.Today.AddDays(-12), DateTime.Today.AddDays(2));
++
++            await AddActiveLoanIfMissingAsync(
++                context, overdueBook, two, DateTime.Today.AddDays(-19), DateTime.Today.AddDays(-5));
++
++            await context.SaveChangesAsync();
++        }
++
++        private static async Task<Borrower> GetOrAddBorrowerAsync(
++            ApplicationDbContext context,
++            string code,
++            string name,
++            string email,
++            string phone)
++        {
++            Borrower? existing = await context.Borrowers
++                .FirstOrDefaultAsync(borrower => borrower.BorrowerCode == code);
++
++            if (existing != null)
++            {
++                return existing;
++            }
++
++            Borrower borrower = new()
++            {
++                BorrowerCode = code,
++                FullName = name,
++                Email = email,
++                PhoneNumber = phone,
++                Address = "1 Demo Street, Darwin NT",
++                IsActive = true
++            };
++
++            context.Borrowers.Add(borrower);
++            await context.SaveChangesAsync();
++
++            return borrower;
++        }
++
++        private static async Task<Book> GetOrAddBookAsync(
++            ApplicationDbContext context,
++            string code,
++            string name,
++            ItemStatus status)
++        {
++            Book? existing = await context.Books
++                .FirstOrDefaultAsync(book => book.LibraryCode == code);
++
++            if (existing != null)
++            {
++                return existing;
++            }
++
++            Book book = new()
++            {
++                Name = name,
++                Description = "Demo record for testing reservations and notifications.",
++                LibraryCode = code,
++                Status = status,
++                Author = "Demo Author",
++                Genre = "Demo",
++                PublicationYear = 2024
++            };
++
++            context.Books.Add(book);
++
++            return book;
++        }
++
++        private static async Task AddActiveLoanIfMissingAsync(
++            ApplicationDbContext context,
++            Book book,
++            Borrower borrower,
++            DateTime borrowDate,
++            DateTime dueDate)
++        {
++            bool hasActiveLoan = await context.Loans
++                .AnyAsync(loan => loan.ItemId == book.Id && loan.ReturnDate == null);
++
++            if (hasActiveLoan)
++            {
++                return;
++            }
++
++            context.Loans.Add(new Loan
++            {
++                ItemId = book.Id,
++                BorrowerId = borrower.Id,
++                BorrowDate = borrowDate,
++                DueDate = dueDate,
++                IssuedBy = "demo-seeder"
++            });
++        }
++    }
++}
+diff --git a/LibraryManagementSystem/Models/ItemStatus.cs b/LibraryManagementSystem/Models/ItemStatus.cs
+index dc1d51f..ab77a96 100644
+--- a/LibraryManagementSystem/Models/ItemStatus.cs
++++ b/LibraryManagementSystem/Models/ItemStatus.cs
+@@ -14,6 +14,10 @@ namespace LibraryManagementSystem.Models
+         Damaged,
+ 
+         [Display(Name = "Destroyed")]
+-        Destroyed
++        Destroyed,
++
++        // Held at the front of a reservation queue for one borrower (R5).
++        [Display(Name = "Reserved")]
++        Reserved
+     }
+ }
+\ No newline at end of file
+diff --git a/LibraryManagementSystem/Models/NotificationLog.cs b/LibraryManagementSystem/Models/NotificationLog.cs
+new file mode 100644
+index 0000000..ece34d0
+--- /dev/null
++++ b/LibraryManagementSystem/Models/NotificationLog.cs
+@@ -0,0 +1,65 @@
++using System.ComponentModel.DataAnnotations;
++using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
++
++namespace LibraryManagementSystem.Models
++{
++    public enum NotificationChannel
++    {
++        Email,
++        Sms
++    }
++
++    public enum NotificationEventType
++    {
++        Borrowed,
++        DueSoon,
++        Overdue,
++        FineAssessed,
++        HoldReady
++    }
++
++    // One simulated email or SMS message (R3). Nothing is sent outside the application.
++    public class NotificationLog
++    {
++        public int Id { get; set; }
++
++        public int BorrowerId { get; set; }
++
++        [ValidateNever]
++        public Borrower Borrower { get; set; } = null!;
++
++        public NotificationChannel Channel { get; set; }
++
++        [Display(Name = "Event")]
++        public NotificationEventType EventType { get; set; }
++
++        // The email address or phone number the message would be sent to.
++        [Required]
++        [StringLength(150)]
++        public string Recipient { get; set; } = string.Empty;
++
++        [Required]
++        [StringLength(200)]
++        public string Subject { get; set; } = string.Empty;
++
++        [Required]
++        [StringLength(1000)]
++        public string Body { get; set; } = string.Empty;
++
++        public int? LoanId { get; set; }
++
++        public int? ReservationId { get; set; }
++
++        // Unique per event and channel. The unique index on this column
++        // stops repeated checks from creating duplicate messages.
++        [Required]
++        [StringLength(200)]
++        public string DedupKey { get; set; } = string.Empty;
++
++        [Display(Name = "Created")]
++        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
++
++        [StringLength(40)]
++        public string Status { get; set; } = "Simulated sent";
++    }
++}
+diff --git a/LibraryManagementSystem/Models/Reservation.cs b/LibraryManagementSystem/Models/Reservation.cs
+new file mode 100644
+index 0000000..cda854b
+--- /dev/null
++++ b/LibraryManagementSystem/Models/Reservation.cs
+@@ -0,0 +1,51 @@
++using System.ComponentModel.DataAnnotations;
++using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
++
++namespace LibraryManagementSystem.Models
++{
++    // Hold lifecycle: Waiting -> Ready -> Collected, or Expired / Cancelled.
++    public enum ReservationStatus
++    {
++        Waiting,
++        Ready,
++        Collected,
++        Expired,
++        Cancelled
++    }
++
++    // Represents one borrower's place in the queue for an item (R5).
++    public class Reservation
++    {
++        public int Id { get; set; }
++
++        [Required]
++        [Display(Name = "Library Item")]
++        public int ItemId { get; set; }
++
++        [ValidateNever]
++        public Item Item { get; set; } = null!;
++
++        [Required]
++        [Display(Name = "Borrower")]
++        public int BorrowerId { get; set; }
++
++        [ValidateNever]
++        public Borrower Borrower { get; set; } = null!;
++
++        // Sets the queue order (first in, first out).
++        [Display(Name = "Placed At")]
++        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
++
++        public ReservationStatus Status { get; set; } = ReservationStatus.Waiting;
++
++        // Set when the hold becomes Ready.
++        public DateTime? ReadyAt { get; set; }
++
++        // Last moment the borrower can collect a Ready item.
++        public DateTime? ExpiresAt { get; set; }
++
++        [StringLength(256)]
++        [Display(Name = "Placed By")]
++        public string PlacedBy { get; set; } = string.Empty;
++    }
++}
+diff --git a/LibraryManagementSystem/Program.cs b/LibraryManagementSystem/Program.cs
+index 2a77f5e..1998806 100644
+--- a/LibraryManagementSystem/Program.cs
++++ b/LibraryManagementSystem/Program.cs
+@@ -49,11 +49,32 @@ builder.Services.Configure<FineSettings>(
+ // Register the fine calculator using Dependency Injection.
+ builder.Services.AddScoped<IFineCalculator, FineCalculator>();
+ 
++// R3 and R5: reservation queue and simulated notifications.
++builder.Services.Configure<ReservationSettings>(
++    builder.Configuration.GetSection(ReservationSettings.SectionName)
++);
++
++builder.Services.Configure<NotificationSettings>(
++    builder.Configuration.GetSection(NotificationSettings.SectionName)
++);
++
++builder.Services.AddScoped<INotificationService, NotificationService>();
++builder.Services.AddScoped<IReservationService, ReservationService>();
++
++// Checks for due-soon and overdue reminders while the app is running.
++builder.Services.AddHostedService<NotificationBackgroundService>();
++
+ var app = builder.Build();
+ 
+ // Create the roles and demonstration accounts.
+ await IdentitySeeder.SeedAsync(app.Services);
+ 
++// Optional demo records for testing reservations and notifications.
++if (app.Configuration.GetValue<bool>("DemoData:SeedReservationScenario"))
++{
++    await ReservationDemoSeeder.SeedAsync(app.Services);
++}
++
+ // Configure error handling.
+ if (app.Environment.IsDevelopment())
+ {
+diff --git a/LibraryManagementSystem/Services/INotificationService.cs b/LibraryManagementSystem/Services/INotificationService.cs
+new file mode 100644
+index 0000000..6705863
+--- /dev/null
++++ b/LibraryManagementSystem/Services/INotificationService.cs
+@@ -0,0 +1,20 @@
++namespace LibraryManagementSystem.Services
++{
++    // Simulates email and SMS by writing each message to the NotificationLogs table.
++    public interface INotificationService
++    {
++        // Email when an item is borrowed.
++        Task NotifyBorrowedAsync(int loanId, CancellationToken ct = default);
++
++        // Email and SMS when a returned loan has a late fine.
++        Task NotifyFineAssessedAsync(int loanId, CancellationToken ct = default);
++
++        // Email and SMS when a hold becomes Ready for collection.
++        Task NotifyHoldReadyAsync(int reservationId, CancellationToken ct = default);
++
++        // Creates due-soon and overdue reminders. Safe to run repeatedly:
++        // each message has a unique key, so duplicates are skipped.
++        // Returns the number of new messages logged.
++        Task<int> RunScheduledChecksAsync(CancellationToken ct = default);
++    }
++}
+diff --git a/LibraryManagementSystem/Services/IReservationService.cs b/LibraryManagementSystem/Services/IReservationService.cs
+new file mode 100644
+index 0000000..3d1171b
+--- /dev/null
++++ b/LibraryManagementSystem/Services/IReservationService.cs
+@@ -0,0 +1,67 @@
++using LibraryManagementSystem.Models;
++
++namespace LibraryManagementSystem.Services
++{
++    public sealed record HoldResult(
++        bool Succeeded,
++        string Message,
++        Reservation? Reservation = null)
++    {
++        public static HoldResult Ok(string message, Reservation? reservation = null)
++            => new(true, message, reservation);
++
++        public static HoldResult Fail(string message)
++            => new(false, message);
++    }
++
++    public sealed record BorrowCheck(bool Allowed, string? Reason = null);
++
++    // One active hold, shaped for the kiosk account summary and staff screens.
++    public sealed record HoldSummary(
++        int ReservationId,
++        string ItemName,
++        string LibraryCode,
++        ReservationStatus Status,
++        int Position,
++        DateTime? ExpiresAt);
++
++    public interface IReservationService
++    {
++        // Places a hold on a Borrowed, Damaged or Reserved item.
++        Task<HoldResult> PlaceHoldAsync(
++            string libraryCode,
++            string borrowerCode,
++            string placedBy,
++            CancellationToken ct = default);
++
++        // Cancels a Waiting or Ready hold. Everyone behind moves up.
++        Task<HoldResult> CancelHoldAsync(int reservationId, CancellationToken ct = default);
++
++        // The borrower's active holds with queue positions (1 = front of the queue).
++        Task<List<HoldSummary>> GetHoldsForBorrowerAsync(int borrowerId, CancellationToken ct = default);
++
++        // Call after an item becomes Available (return or repair).
++        // Gives it to the first Waiting hold, or leaves it Available.
++        Task<Reservation?> OnItemAvailableAsync(int itemId, CancellationToken ct = default);
++
++        // Call after an admin edits an item's status.
++        Task OnItemStatusChangedAsync(
++            int itemId,
++            ItemStatus oldStatus,
++            ItemStatus newStatus,
++            CancellationToken ct = default);
++
++        // Call before issuing a loan: a Ready item can only go to the holder.
++        Task<BorrowCheck> CheckBorrowAllowedAsync(
++            int itemId,
++            int borrowerId,
++            CancellationToken ct = default);
++
++        // Marks the borrower's Ready hold Collected. Does NOT save;
++        // the caller saves it together with the new loan.
++        Task MarkCollectedAsync(int itemId, int borrowerId, CancellationToken ct = default);
++
++        // Expires Ready holds past their pickup window and offers the item to the next borrower.
++        Task<int> ExpireOverdueHoldsAsync(CancellationToken ct = default);
++    }
++}
+diff --git a/LibraryManagementSystem/Services/NotificationBackgroundService.cs b/LibraryManagementSystem/Services/NotificationBackgroundService.cs
+new file mode 100644
+index 0000000..9d2c4f7
+--- /dev/null
++++ b/LibraryManagementSystem/Services/NotificationBackgroundService.cs
+@@ -0,0 +1,65 @@
++using Microsoft.Extensions.Options;
++
++namespace LibraryManagementSystem.Services
++{
++    // Runs while the app runs: expires old holds and creates due-soon / overdue reminders.
++    public class NotificationBackgroundService : BackgroundService
++    {
++        private readonly IServiceScopeFactory _scopeFactory;
++        private readonly NotificationSettings _settings;
++        private readonly ILogger<NotificationBackgroundService> _logger;
++
++        public NotificationBackgroundService(
++            IServiceScopeFactory scopeFactory,
++            IOptions<NotificationSettings> options,
++            ILogger<NotificationBackgroundService> logger)
++        {
++            _scopeFactory = scopeFactory;
++            _settings = options.Value;
++            _logger = logger;
++        }
++
++        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
++        {
++            TimeSpan interval = TimeSpan.FromMinutes(Math.Max(1, _settings.CheckIntervalMinutes));
++
++            try
++            {
++                // Give the app and database a moment to start.
++                await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
++
++                while (!stoppingToken.IsCancellationRequested)
++                {
++                    await RunOnceAsync(stoppingToken);
++                    await Task.Delay(interval, stoppingToken);
++                }
++            }
++            catch (OperationCanceledException)
++            {
++                // The app is shutting down.
++            }
++        }
++
++        private async Task RunOnceAsync(CancellationToken ct)
++        {
++            try
++            {
++                using IServiceScope scope = _scopeFactory.CreateScope();
++
++                IReservationService reservations =
++                    scope.ServiceProvider.GetRequiredService<IReservationService>();
++
++                INotificationService notifications =
++                    scope.ServiceProvider.GetRequiredService<INotificationService>();
++
++                await reservations.ExpireOverdueHoldsAsync(ct);
++                await notifications.RunScheduledChecksAsync(ct);
++            }
++            catch (Exception ex) when (ex is not OperationCanceledException)
++            {
++                // Keep running; try again at the next interval.
++                _logger.LogError(ex, "The scheduled notification check failed.");
++            }
++        }
++    }
++}
+diff --git a/LibraryManagementSystem/Services/NotificationService.cs b/LibraryManagementSystem/Services/NotificationService.cs
+new file mode 100644
+index 0000000..8579846
+--- /dev/null
++++ b/LibraryManagementSystem/Services/NotificationService.cs
+@@ -0,0 +1,279 @@
++using LibraryManagementSystem.Data;
++using LibraryManagementSystem.Models;
++using Microsoft.EntityFrameworkCore;
++using Microsoft.Extensions.Options;
++
++namespace LibraryManagementSystem.Services
++{
++    public class NotificationService : INotificationService
++    {
++        private readonly ApplicationDbContext _context;
++        private readonly IFineCalculator _fineCalculator;
++        private readonly NotificationSettings _settings;
++        private readonly ILogger<NotificationService> _logger;
++
++        public NotificationService(
++            ApplicationDbContext context,
++            IFineCalculator fineCalculator,
++            IOptions<NotificationSettings> options,
++            ILogger<NotificationService> logger)
++        {
++            _context = context;
++            _fineCalculator = fineCalculator;
++            _settings = options.Value;
++            _logger = logger;
++        }
++
++        public async Task NotifyBorrowedAsync(int loanId, CancellationToken ct = default)
++        {
++            try
++            {
++                Loan? loan = await LoadLoanAsync(loanId, ct);
++
++                if (loan == null)
++                {
++                    return;
++                }
++
++                await LogAsync(
++                    loan.Borrower,
++                    NotificationChannel.Email,
++                    NotificationEventType.Borrowed,
++                    $"You borrowed \"{loan.Item.Name}\"",
++                    $"Hi {loan.Borrower.FullName}, you borrowed \"{loan.Item.Name}\" " +
++                    $"({loan.Item.LibraryCode}). Please return it by {loan.DueDate:d MMM yyyy}.",
++                    $"BORROWED:{loan.Id}",
++                    loan.Id,
++                    null,
++                    ct);
++            }
++            catch (Exception ex) when (ex is not OperationCanceledException)
++            {
++                // A failed message must never undo a completed borrowing.
++                _logger.LogWarning(ex, "Could not log the borrowed notification for loan {LoanId}.", loanId);
++            }
++        }
++
++        public async Task NotifyFineAssessedAsync(int loanId, CancellationToken ct = default)
++        {
++            try
++            {
++                Loan? loan = await LoadLoanAsync(loanId, ct);
++
++                if (loan == null || loan.FineAmount <= 0)
++                {
++                    return;
++                }
++
++                await LogBothAsync(
++                    loan.Borrower,
++                    NotificationEventType.FineAssessed,
++                    $"Late fine for \"{loan.Item.Name}\"",
++                    $"Hi {loan.Borrower.FullName}, \"{loan.Item.Name}\" was returned late. " +
++                    $"A fine of {loan.FineAmount:C} has been assessed and is unpaid.",
++                    $"Fine of {loan.FineAmount:C} assessed for late return of \"{loan.Item.Name}\". Payment due at the library.",
++                    $"FINE:{loan.Id}",
++                    loan.Id,
++                    null,
++                    ct);
++            }
++            catch (Exception ex) when (ex is not OperationCanceledException)
++            {
++                _logger.LogWarning(ex, "Could not log the fine notification for loan {LoanId}.", loanId);
++            }
++        }
++
++        public async Task NotifyHoldReadyAsync(int reservationId, CancellationToken ct = default)
++        {
++            try
++            {
++                Reservation? hold = await _context.Reservations
++                    .AsNoTracking()
++                    .Include(record => record.Item)
++                    .Include(record => record.Borrower)
++                    .FirstOrDefaultAsync(record => record.Id == reservationId, ct);
++
++                if (hold == null || hold.Status != ReservationStatus.Ready)
++                {
++                    return;
++                }
++
++                string collectBy = hold.ExpiresAt?.ToLocalTime().ToString("d MMM yyyy") ?? "soon";
++
++                await LogBothAsync(
++                    hold.Borrower,
++                    NotificationEventType.HoldReady,
++                    $"\"{hold.Item.Name}\" is ready to collect",
++                    $"Hi {hold.Borrower.FullName}, \"{hold.Item.Name}\" ({hold.Item.LibraryCode}) " +
++                    $"is now ready for you. Please collect it by {collectBy}.",
++                    $"\"{hold.Item.Name}\" is ready for you. Collect by {collectBy}.",
++                    $"HOLDREADY:{hold.Id}",
++                    null,
++                    hold.Id,
++                    ct);
++            }
++            catch (Exception ex) when (ex is not OperationCanceledException)
++            {
++                _logger.LogWarning(ex, "Could not log the hold-ready notification for hold {HoldId}.", reservationId);
++            }
++        }
++
++        public async Task<int> RunScheduledChecksAsync(CancellationToken ct = default)
++        {
++            DateTime today = DateTime.Today;
++            DateTime soonLimit = today.AddDays(_settings.DueSoonDays);
++
++            List<Loan> loans = await _context.Loans
++                .AsNoTracking()
++                .Include(loan => loan.Item)
++                .Include(loan => loan.Borrower)
++                .Where(loan =>
++                    loan.ReturnDate == null &&
++                    loan.DueDate <= soonLimit)
++                .ToListAsync(ct);
++
++            int created = 0;
++
++            foreach (Loan loan in loans)
++            {
++                DateTime due = loan.DueDate.Date;
++
++                if (due >= today)
++                {
++                    // Due soon: one reminder per loan.
++                    int daysLeft = (due - today).Days;
++                    string when = daysLeft == 0 ? "today" : $"in {daysLeft} day(s)";
++
++                    created += await LogBothAsync(
++                        loan.Borrower,
++                        NotificationEventType.DueSoon,
++                        $"\"{loan.Item.Name}\" is due {when}",
++                        $"Hi {loan.Borrower.FullName}, \"{loan.Item.Name}\" is due {when} " +
++                        $"({due:d MMM yyyy}). Please return it on time to avoid a fine.",
++                        $"\"{loan.Item.Name}\" is due {when} ({due:d MMM}). Return on time to avoid a fine.",
++                        $"DUESOON:{loan.Id}:{due:yyyyMMdd}",
++                        loan.Id,
++                        null,
++                        ct);
++                }
++                else
++                {
++                    // Overdue: the fine is still accruing. One reminder per loan per week.
++                    int overdueDays = (today - due).Days;
++                    int week = (overdueDays - 1) / 7;
++                    decimal fine = _fineCalculator.CalculateFine(due, today);
++
++                    created += await LogBothAsync(
++                        loan.Borrower,
++                        NotificationEventType.Overdue,
++                        $"\"{loan.Item.Name}\" is overdue",
++                        $"Hi {loan.Borrower.FullName}, \"{loan.Item.Name}\" is {overdueDays} day(s) overdue. " +
++                        $"The fine so far is {fine:C}. Return the item to stop further fines.",
++                        $"\"{loan.Item.Name}\" is {overdueDays} day(s) overdue. Fine so far {fine:C}.",
++                        $"OVERDUE:{loan.Id}:{week}",
++                        loan.Id,
++                        null,
++                        ct);
++                }
++            }
++
++            if (created > 0)
++            {
++                _logger.LogInformation("Scheduled check logged {Count} new notification(s).", created);
++            }
++
++            return created;
++        }
++
++        private Task<Loan?> LoadLoanAsync(int loanId, CancellationToken ct)
++        {
++            return _context.Loans
++                .AsNoTracking()
++                .Include(loan => loan.Item)
++                .Include(loan => loan.Borrower)
++                .FirstOrDefaultAsync(loan => loan.Id == loanId, ct);
++        }
++
++        // Logs the same event as an email (long text) and an SMS (short text).
++        private async Task<int> LogBothAsync(
++            Borrower borrower,
++            NotificationEventType eventType,
++            string subject,
++            string emailBody,
++            string smsBody,
++            string baseKey,
++            int? loanId,
++            int? reservationId,
++            CancellationToken ct)
++        {
++            int count = 0;
++
++            if (await LogAsync(borrower, NotificationChannel.Email, eventType, subject,
++                    emailBody, baseKey, loanId, reservationId, ct))
++            {
++                count++;
++            }
++
++            if (await LogAsync(borrower, NotificationChannel.Sms, eventType, subject,
++                    smsBody, baseKey, loanId, reservationId, ct))
++            {
++                count++;
++            }
++
++            return count;
++        }
++
++        // Returns false (and logs nothing) when the same message already exists.
++        private async Task<bool> LogAsync(
++            Borrower borrower,
++            NotificationChannel channel,
++            NotificationEventType eventType,
++            string subject,
++            string body,
++            string baseKey,
++            int? loanId,
++            int? reservationId,
++            CancellationToken ct)
++        {
++            string key = $"{baseKey}:{channel}";
++
++            if (await _context.NotificationLogs.AnyAsync(n => n.DedupKey == key, ct))
++            {
++                return false;
++            }
++
++            NotificationLog row = new()
++            {
++                BorrowerId = borrower.Id,
++                Channel = channel,
++                EventType = eventType,
++                Recipient = channel == NotificationChannel.Email
++                    ? borrower.Email
++                    : borrower.PhoneNumber,
++                Subject = Truncate(subject, 200),
++                Body = Truncate(body, 1000),
++                LoanId = loanId,
++                ReservationId = reservationId,
++                DedupKey = key,
++                CreatedAt = DateTime.UtcNow
++            };
++
++            _context.NotificationLogs.Add(row);
++
++            try
++            {
++                await _context.SaveChangesAsync(ct);
++                return true;
++            }
++            catch (DbUpdateException)
++            {
++                // Another request logged the same message first; the unique index stopped ours.
++                _context.Entry(row).State = EntityState.Detached;
++                return false;
++            }
++        }
++
++        private static string Truncate(string text, int maxLength)
++            => text.Length <= maxLength ? text : text[..maxLength];
++    }
++}
+diff --git a/LibraryManagementSystem/Services/NotificationSettings.cs b/LibraryManagementSystem/Services/NotificationSettings.cs
+new file mode 100644
+index 0000000..8f403f8
+--- /dev/null
++++ b/LibraryManagementSystem/Services/NotificationSettings.cs
+@@ -0,0 +1,14 @@
++namespace LibraryManagementSystem.Services
++{
++    // Notification rules loaded from appsettings.json.
++    public class NotificationSettings
++    {
++        public const string SectionName = "NotificationSettings";
++
++        // A "due soon" reminder is created when a loan is due within this many days.
++        public int DueSoonDays { get; set; } = 2;
++
++        // How often the background job checks for reminders while the app runs.
++        public int CheckIntervalMinutes { get; set; } = 60;
++    }
++}
+diff --git a/LibraryManagementSystem/Services/ReservationService.cs b/LibraryManagementSystem/Services/ReservationService.cs
+new file mode 100644
+index 0000000..c2a66c1
+--- /dev/null
++++ b/LibraryManagementSystem/Services/ReservationService.cs
+@@ -0,0 +1,411 @@
++using System.Data;
++using LibraryManagementSystem.Data;
++using LibraryManagementSystem.Models;
++using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.Storage;
++using Microsoft.Extensions.Options;
++
++namespace LibraryManagementSystem.Services
++{
++    public class ReservationService : IReservationService
++    {
++        private readonly ApplicationDbContext _context;
++        private readonly INotificationService _notifications;
++        private readonly ReservationSettings _settings;
++        private readonly ILogger<ReservationService> _logger;
++
++        public ReservationService(
++            ApplicationDbContext context,
++            INotificationService notifications,
++            IOptions<ReservationSettings> options,
++            ILogger<ReservationService> logger)
++        {
++            _context = context;
++            _notifications = notifications;
++            _settings = options.Value;
++            _logger = logger;
++        }
++
++        public async Task<HoldResult> PlaceHoldAsync(
++            string libraryCode,
++            string borrowerCode,
++            string placedBy,
++            CancellationToken ct = default)
++        {
++            libraryCode = libraryCode.Trim().ToUpperInvariant();
++            borrowerCode = borrowerCode.Trim().ToUpperInvariant();
++
++            Item? item = await _context.Items
++                .FirstOrDefaultAsync(record =>
++                    record.LibraryCode.ToUpper() == libraryCode, ct);
++
++            if (item == null)
++            {
++                return HoldResult.Fail("No library item was found with this code.");
++            }
++
++            Borrower? borrower = await _context.Borrowers
++                .FirstOrDefaultAsync(record =>
++                    record.BorrowerCode.ToUpper() == borrowerCode, ct);
++
++            if (borrower == null)
++            {
++                return HoldResult.Fail("No borrower was found with this code.");
++            }
++
++            if (!borrower.IsActive)
++            {
++                return HoldResult.Fail("This borrower account is inactive.");
++            }
++
++            if (item.Status == ItemStatus.Available)
++            {
++                return HoldResult.Fail(
++                    "This item is available now, so it can be borrowed instead of reserved.");
++            }
++
++            if (item.Status == ItemStatus.Destroyed)
++            {
++                return HoldResult.Fail("This item has been destroyed and cannot be reserved.");
++            }
++
++            bool borrowerHasItem = await _context.Loans
++                .AnyAsync(loan =>
++                    loan.ItemId == item.Id &&
++                    loan.BorrowerId == borrower.Id &&
++                    loan.ReturnDate == null, ct);
++
++            if (borrowerHasItem)
++            {
++                return HoldResult.Fail("This borrower already has the item on loan.");
++            }
++
++            bool duplicate = await _context.Reservations
++                .AnyAsync(hold =>
++                    hold.ItemId == item.Id &&
++                    hold.BorrowerId == borrower.Id &&
++                    (hold.Status == ReservationStatus.Waiting ||
++                     hold.Status == ReservationStatus.Ready), ct);
++
++            if (duplicate)
++            {
++                return HoldResult.Fail("This borrower already has an active hold on the item.");
++            }
++
++            Reservation reservation = new()
++            {
++                ItemId = item.Id,
++                BorrowerId = borrower.Id,
++                Status = ReservationStatus.Waiting,
++                CreatedAt = DateTime.UtcNow,
++                PlacedBy = placedBy
++            };
++
++            _context.Reservations.Add(reservation);
++
++            try
++            {
++                await _context.SaveChangesAsync(ct);
++            }
++            catch (DbUpdateException)
++            {
++                // The unique index caught a duplicate placed at the same moment.
++                _context.Entry(reservation).State = EntityState.Detached;
++
++                return HoldResult.Fail("This borrower already has an active hold on the item.");
++            }
++
++            int position = await GetPositionAsync(reservation, ct);
++
++            return HoldResult.Ok(
++                $"Hold placed for {borrower.FullName} on \"{item.Name}\". " +
++                $"Queue position: {position}.",
++                reservation);
++        }
++
++        public async Task<HoldResult> CancelHoldAsync(
++            int reservationId,
++            CancellationToken ct = default)
++        {
++            Reservation? reservation = await _context.Reservations
++                .FirstOrDefaultAsync(hold => hold.Id == reservationId, ct);
++
++            if (reservation == null)
++            {
++                return HoldResult.Fail("That hold could not be found.");
++            }
++
++            if (reservation.Status != ReservationStatus.Waiting &&
++                reservation.Status != ReservationStatus.Ready)
++            {
++                return HoldResult.Fail("That hold is already closed.");
++            }
++
++            bool wasReady = reservation.Status == ReservationStatus.Ready;
++
++            reservation.Status = ReservationStatus.Cancelled;
++            await _context.SaveChangesAsync(ct);
++
++            // A cancelled Ready hold frees the item for the next borrower.
++            if (wasReady)
++            {
++                await OnItemAvailableAsync(reservation.ItemId, ct);
++            }
++
++            return HoldResult.Ok("The hold was cancelled.", reservation);
++        }
++
++        public async Task<List<HoldSummary>> GetHoldsForBorrowerAsync(
++            int borrowerId,
++            CancellationToken ct = default)
++        {
++            List<Reservation> holds = await _context.Reservations
++                .AsNoTracking()
++                .Include(hold => hold.Item)
++                .Where(hold =>
++                    hold.BorrowerId == borrowerId &&
++                    (hold.Status == ReservationStatus.Waiting ||
++                     hold.Status == ReservationStatus.Ready))
++                .OrderBy(hold => hold.CreatedAt)
++                .ToListAsync(ct);
++
++            List<HoldSummary> summaries = new();
++
++            foreach (Reservation hold in holds)
++            {
++                summaries.Add(new HoldSummary(
++                    hold.Id,
++                    hold.Item.Name,
++                    hold.Item.LibraryCode,
++                    hold.Status,
++                    await GetPositionAsync(hold, ct),
++                    hold.ExpiresAt));
++            }
++
++            return summaries;
++        }
++
++        public async Task<Reservation?> OnItemAvailableAsync(
++            int itemId,
++            CancellationToken ct = default)
++        {
++            // Use the caller's transaction if there is one; otherwise start our own.
++            // Serializable stops two requests giving the same copy to two borrowers.
++            IDbContextTransaction? ownTransaction =
++                _context.Database.CurrentTransaction == null
++                    ? await _context.Database.BeginTransactionAsync(
++                        IsolationLevel.Serializable, ct)
++                    : null;
++
++            Reservation? promoted = null;
++
++            try
++            {
++                Item? item = await _context.Items
++                    .FirstOrDefaultAsync(record => record.Id == itemId, ct);
++
++                if (item != null && item.Status != ItemStatus.Destroyed)
++                {
++                    bool alreadyHeld = await _context.Reservations
++                        .AnyAsync(hold =>
++                            hold.ItemId == itemId &&
++                            hold.Status == ReservationStatus.Ready, ct);
++
++                    if (alreadyHeld)
++                    {
++                        // A Ready hold exists, so the item must not look available.
++                        item.Status = ItemStatus.Reserved;
++                    }
++                    else
++                    {
++                        Reservation? next = await _context.Reservations
++                            .Where(hold =>
++                                hold.ItemId == itemId &&
++                                hold.Status == ReservationStatus.Waiting)
++                            .OrderBy(hold => hold.CreatedAt)
++                            .ThenBy(hold => hold.Id)
++                            .FirstOrDefaultAsync(ct);
++
++                        if (next != null)
++                        {
++                            DateTime now = DateTime.UtcNow;
++
++                            next.Status = ReservationStatus.Ready;
++                            next.ReadyAt = now;
++                            next.ExpiresAt = now.AddDays(_settings.PickupDays);
++                            item.Status = ItemStatus.Reserved;
++
++                            promoted = next;
++                        }
++                        else if (item.Status == ItemStatus.Reserved)
++                        {
++                            // Nobody is waiting any more, so release the item.
++                            item.Status = ItemStatus.Available;
++                        }
++                    }
++
++                    await _context.SaveChangesAsync(ct);
++                }
++
++                if (ownTransaction != null)
++                {
++                    await ownTransaction.CommitAsync(ct);
++                }
++            }
++            catch
++            {
++                if (ownTransaction != null)
++                {
++                    await ownTransaction.RollbackAsync(ct);
++                }
++
++                throw;
++            }
++            finally
++            {
++                if (ownTransaction != null)
++                {
++                    await ownTransaction.DisposeAsync();
++                }
++            }
++
++            if (promoted != null)
++            {
++                // Notify after the allocation is saved.
++                await _notifications.NotifyHoldReadyAsync(promoted.Id, ct);
++            }
++
++            return promoted;
++        }
++
++        public async Task OnItemStatusChangedAsync(
++            int itemId,
++            ItemStatus oldStatus,
++            ItemStatus newStatus,
++            CancellationToken ct = default)
++        {
++            if (newStatus == ItemStatus.Available && oldStatus != ItemStatus.Available)
++            {
++                // For example a Damaged item that has been repaired.
++                await OnItemAvailableAsync(itemId, ct);
++            }
++            else if (newStatus == ItemStatus.Destroyed)
++            {
++                List<Reservation> activeHolds = await _context.Reservations
++                    .Where(hold =>
++                        hold.ItemId == itemId &&
++                        (hold.Status == ReservationStatus.Waiting ||
++                         hold.Status == ReservationStatus.Ready))
++                    .ToListAsync(ct);
++
++                foreach (Reservation hold in activeHolds)
++                {
++                    hold.Status = ReservationStatus.Cancelled;
++                }
++
++                if (activeHolds.Count > 0)
++                {
++                    await _context.SaveChangesAsync(ct);
++                }
++            }
++        }
++
++        public async Task<BorrowCheck> CheckBorrowAllowedAsync(
++            int itemId,
++            int borrowerId,
++            CancellationToken ct = default)
++        {
++            Reservation? ready = await _context.Reservations
++                .AsNoTracking()
++                .FirstOrDefaultAsync(hold =>
++                    hold.ItemId == itemId &&
++                    hold.Status == ReservationStatus.Ready, ct);
++
++            if (ready == null)
++            {
++                return new BorrowCheck(true);
++            }
++
++            return ready.BorrowerId == borrowerId
++                ? new BorrowCheck(true)
++                : new BorrowCheck(false, "This item is being held for another borrower.");
++        }
++
++        public async Task MarkCollectedAsync(
++            int itemId,
++            int borrowerId,
++            CancellationToken ct = default)
++        {
++            Reservation? ready = await _context.Reservations
++                .FirstOrDefaultAsync(hold =>
++                    hold.ItemId == itemId &&
++                    hold.BorrowerId == borrowerId &&
++                    hold.Status == ReservationStatus.Ready, ct);
++
++            if (ready != null)
++            {
++                ready.Status = ReservationStatus.Collected;
++            }
++        }
++
++        public async Task<int> ExpireOverdueHoldsAsync(CancellationToken ct = default)
++        {
++            DateTime now = DateTime.UtcNow;
++
++            List<Reservation> expired = await _context.Reservations
++                .Where(hold =>
++                    hold.Status == ReservationStatus.Ready &&
++                    hold.ExpiresAt != null &&
++                    hold.ExpiresAt < now)
++                .ToListAsync(ct);
++
++            foreach (Reservation hold in expired)
++            {
++                hold.Status = ReservationStatus.Expired;
++                await _context.SaveChangesAsync(ct);
++
++                _logger.LogInformation(
++                    "Hold {HoldId} expired; offering item {ItemId} to the next borrower.",
++                    hold.Id,
++                    hold.ItemId);
++
++                await OnItemAvailableAsync(hold.ItemId, ct);
++            }
++
++            // Safety net: an Available item should never have people waiting for it
++            // (for example if a return was saved but the queue update failed).
++            List<int> stranded = await _context.Reservations
++                .Where(hold =>
++                    hold.Status == ReservationStatus.Waiting &&
++                    hold.Item.Status == ItemStatus.Available)
++                .Select(hold => hold.ItemId)
++                .Distinct()
++                .ToListAsync(ct);
++
++            foreach (int itemId in stranded)
++            {
++                await OnItemAvailableAsync(itemId, ct);
++            }
++
++            return expired.Count;
++        }
++
++        // 1 = front of the queue. Counts active holds placed before this one.
++        private async Task<int> GetPositionAsync(
++            Reservation reservation,
++            CancellationToken ct)
++        {
++            int ahead = await _context.Reservations
++                .AsNoTracking()
++                .CountAsync(hold =>
++                    hold.ItemId == reservation.ItemId &&
++                    (hold.Status == ReservationStatus.Waiting ||
++                     hold.Status == ReservationStatus.Ready) &&
++                    (hold.CreatedAt < reservation.CreatedAt ||
++                     (hold.CreatedAt == reservation.CreatedAt &&
++                      hold.Id < reservation.Id)), ct);
++
++            return ahead + 1;
++        }
++    }
++}
+diff --git a/LibraryManagementSystem/Services/ReservationSettings.cs b/LibraryManagementSystem/Services/ReservationSettings.cs
+new file mode 100644
+index 0000000..2de8d2c
+--- /dev/null
++++ b/LibraryManagementSystem/Services/ReservationSettings.cs
+@@ -0,0 +1,11 @@
++namespace LibraryManagementSystem.Services
++{
++    // Reservation rules loaded from appsettings.json.
++    public class ReservationSettings
++    {
++        public const string SectionName = "ReservationSettings";
++
++        // Days a borrower has to collect an item once their hold is Ready.
++        public int PickupDays { get; set; } = 3;
++    }
++}
+diff --git a/LibraryManagementSystem/ViewModels/HoldsIndexViewModel.cs b/LibraryManagementSystem/ViewModels/HoldsIndexViewModel.cs
+new file mode 100644
+index 0000000..5e66d02
+--- /dev/null
++++ b/LibraryManagementSystem/ViewModels/HoldsIndexViewModel.cs
+@@ -0,0 +1,40 @@
++using LibraryManagementSystem.Models;
++
++namespace LibraryManagementSystem.ViewModels
++{
++    public class HoldRowViewModel
++    {
++        public int ReservationId { get; set; }
++
++        public string ItemName { get; set; } = string.Empty;
++
++        public string LibraryCode { get; set; } = string.Empty;
++
++        public string BorrowerName { get; set; } = string.Empty;
++
++        public string BorrowerCode { get; set; } = string.Empty;
++
++        public ReservationStatus Status { get; set; }
++
++        // 1 = front of the queue. Null for closed holds.
++        public int? Position { get; set; }
++
++        public DateTime CreatedAt { get; set; }
++
++        public DateTime? ExpiresAt { get; set; }
++
++        public bool IsActive =>
++            Status == ReservationStatus.Waiting ||
++            Status == ReservationStatus.Ready;
++    }
++
++    public class HoldsIndexViewModel
++    {
++        public List<HoldRowViewModel> Holds { get; set; } = new();
++
++        public string SearchTerm { get; set; } = string.Empty;
++
++        // "Active" (default), "All", or a ReservationStatus name.
++        public string SelectedStatus { get; set; } = "Active";
++    }
++}
+diff --git a/LibraryManagementSystem/ViewModels/NotificationsIndexViewModel.cs b/LibraryManagementSystem/ViewModels/NotificationsIndexViewModel.cs
+new file mode 100644
+index 0000000..1c4dbde
+--- /dev/null
++++ b/LibraryManagementSystem/ViewModels/NotificationsIndexViewModel.cs
+@@ -0,0 +1,18 @@
++using LibraryManagementSystem.Models;
++
++namespace LibraryManagementSystem.ViewModels
++{
++    public class NotificationsIndexViewModel
++    {
++        public List<NotificationLog> Notifications { get; set; } = new();
++
++        public string SearchTerm { get; set; } = string.Empty;
++
++        public string SelectedChannel { get; set; } = string.Empty;
++
++        public string SelectedEvent { get; set; } = string.Empty;
++
++        // Total matching rows; the page shows the latest 200.
++        public int TotalMatching { get; set; }
++    }
++}
+diff --git a/LibraryManagementSystem/ViewModels/PlaceHoldViewModel.cs b/LibraryManagementSystem/ViewModels/PlaceHoldViewModel.cs
+new file mode 100644
+index 0000000..62225e7
+--- /dev/null
++++ b/LibraryManagementSystem/ViewModels/PlaceHoldViewModel.cs
+@@ -0,0 +1,18 @@
++using System.ComponentModel.DataAnnotations;
++
++namespace LibraryManagementSystem.ViewModels
++{
++    // Reception enters an item code and a borrower code to place a hold.
++    public class PlaceHoldViewModel
++    {
++        [Required(ErrorMessage = "The item library code is required.")]
++        [StringLength(50)]
++        [Display(Name = "Item Library Code")]
++        public string LibraryCode { get; set; } = string.Empty;
++
++        [Required(ErrorMessage = "The borrower code is required.")]
++        [StringLength(20)]
++        [Display(Name = "Borrower Code")]
++        public string BorrowerCode { get; set; } = string.Empty;
++    }
++}
+diff --git a/LibraryManagementSystem/Views/Catalogue/Index.cshtml b/LibraryManagementSystem/Views/Catalogue/Index.cshtml
+index 2de7bf8..4bafccf 100644
+--- a/LibraryManagementSystem/Views/Catalogue/Index.cshtml
++++ b/LibraryManagementSystem/Views/Catalogue/Index.cshtml
+@@ -90,6 +90,11 @@
+                         Damaged
+                     </option>
+ 
++                    <option value="Reserved"
++                            selected="@(Model.SelectedStatus == "Reserved")">
++                        Reserved
++                    </option>
++
+                     <option value="Destroyed"
+                             selected="@(Model.SelectedStatus == "Destroyed")">
+                         Destroyed
+@@ -146,6 +151,7 @@ else
+                 ItemStatus.Borrowed => "bg-primary",
+                 ItemStatus.Damaged => "bg-warning text-dark",
+                 ItemStatus.Destroyed => "bg-danger",
++                ItemStatus.Reserved => "bg-info text-dark",
+                 _ => "bg-secondary"
+             };
+ 
+diff --git a/LibraryManagementSystem/Views/Holds/Index.cshtml b/LibraryManagementSystem/Views/Holds/Index.cshtml
+new file mode 100644
+index 0000000..9778688
+--- /dev/null
++++ b/LibraryManagementSystem/Views/Holds/Index.cshtml
+@@ -0,0 +1,243 @@
++@using LibraryManagementSystem.Models
++@model LibraryManagementSystem.ViewModels.HoldsIndexViewModel
++
++@{
++    ViewData["Title"] = "Reservations";
++}
++
++<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
++    <div>
++        <h1 class="mb-1">Reservations</h1>
++        <p class="text-muted mb-0">
++            Holds on borrowed or damaged items. The first borrower in the queue is notified when the item is ready.
++        </p>
++    </div>
++
++    @if (User.IsInRole(RoleNames.Reception))
++    {
++        <a asp-action="Place"
++           class="btn btn-primary">
++            Place Hold
++        </a>
++    }
++</div>
++
++@if (TempData["SuccessMessage"] is string successMessage)
++{
++    <div class="alert alert-success alert-dismissible fade show"
++         role="alert">
++        @successMessage
++
++        <button type="button"
++                class="btn-close"
++                data-bs-dismiss="alert"
++                aria-label="Close">
++        </button>
++    </div>
++}
++
++@if (TempData["ErrorMessage"] is string errorMessage)
++{
++    <div class="alert alert-danger alert-dismissible fade show"
++         role="alert">
++        @errorMessage
++
++        <button type="button"
++                class="btn-close"
++                data-bs-dismiss="alert"
++                aria-label="Close">
++        </button>
++    </div>
++}
++
++<div class="card shadow-sm mb-4">
++    <div class="card-body">
++        <form asp-action="Index"
++              method="get"
++              class="row g-3 align-items-end">
++
++            <div class="col-12 col-lg-6">
++                <label for="searchTerm"
++                       class="form-label">
++                    Search
++                </label>
++
++                <input id="searchTerm"
++                       name="searchTerm"
++                       value="@Model.SearchTerm"
++                       class="form-control"
++                       placeholder="Item code, item name, borrower code or borrower name" />
++            </div>
++
++            <div class="col-12 col-md-6 col-lg-3">
++                <label for="status"
++                       class="form-label">
++                    Hold Status
++                </label>
++
++                <select id="status"
++                        name="status"
++                        class="form-select">
++
++                    <option value="Active"
++                            selected="@(Model.SelectedStatus == "Active")">
++                        Active (waiting or ready)
++                    </option>
++
++                    <option value="Waiting"
++                            selected="@(Model.SelectedStatus == "Waiting")">
++                        Waiting
++                    </option>
++
++                    <option value="Ready"
++                            selected="@(Model.SelectedStatus == "Ready")">
++                        Ready
++                    </option>
++
++                    <option value="Collected"
++                            selected="@(Model.SelectedStatus == "Collected")">
++                        Collected
++                    </option>
++
++                    <option value="Expired"
++                            selected="@(Model.SelectedStatus == "Expired")">
++                        Expired
++                    </option>
++
++                    <option value="Cancelled"
++                            selected="@(Model.SelectedStatus == "Cancelled")">
++                        Cancelled
++                    </option>
++
++                    <option value="All"
++                            selected="@(Model.SelectedStatus == "All")">
++                        All holds
++                    </option>
++                </select>
++            </div>
++
++            <div class="col-12 col-md-6 col-lg-3">
++                <div class="d-flex gap-2">
++                    <button type="submit"
++                            class="btn btn-primary flex-grow-1">
++                        Search
++                    </button>
++
++                    <a asp-action="Index"
++                       class="btn btn-outline-secondary">
++                        Clear
++                    </a>
++                </div>
++            </div>
++        </form>
++    </div>
++</div>
++
++@if (!Model.Holds.Any())
++{
++    <div class="card shadow-sm">
++        <div class="card-body text-center py-5">
++            <h2 class="h4">No holds found</h2>
++
++            <p class="text-muted mb-0">
++                Change the search filters, or place a hold on a borrowed or damaged item.
++            </p>
++        </div>
++    </div>
++}
++else
++{
++    <div class="card shadow-sm">
++        <div class="table-responsive">
++            <table class="table table-hover align-middle mb-0">
++                <caption class="visually-hidden">
++                    Reservation queue with each borrower's position
++                </caption>
++
++                <thead class="table-light">
++                    <tr>
++                        <th scope="col">Item</th>
++                        <th scope="col">Borrower</th>
++                        <th scope="col">Queue position</th>
++                        <th scope="col">Status</th>
++                        <th scope="col">Placed</th>
++                        <th scope="col">Collect by</th>
++                        <th scope="col"><span class="visually-hidden">Actions</span></th>
++                    </tr>
++                </thead>
++
++                <tbody>
++                    @foreach (var hold in Model.Holds)
++                    {
++                        string statusColour = hold.Status switch
++                        {
++                            ReservationStatus.Waiting => "bg-primary",
++                            ReservationStatus.Ready => "bg-success",
++                            ReservationStatus.Expired => "bg-warning text-dark",
++                            _ => "bg-secondary"
++                        };
++
++                        <tr>
++                            <td>
++                                <div class="fw-semibold">@hold.ItemName</div>
++                                <div class="text-muted small">@hold.LibraryCode</div>
++                            </td>
++
++                            <td>
++                                <div>@hold.BorrowerName</div>
++                                <div class="text-muted small">@hold.BorrowerCode</div>
++                            </td>
++
++                            <td>
++                                @if (hold.Position.HasValue)
++                                {
++                                    @:#@hold.Position
++                                }
++                                else
++                                {
++                                    <span class="text-muted">Closed</span>
++                                }
++                            </td>
++
++                            <td>
++                                <span class="badge @statusColour">
++                                    @hold.Status
++                                </span>
++                            </td>
++
++                            <td>@hold.CreatedAt.ToLocalTime().ToString("d MMM yyyy")</td>
++
++                            <td>
++                                @if (hold.Status == ReservationStatus.Ready && hold.ExpiresAt.HasValue)
++                                {
++                                    @hold.ExpiresAt.Value.ToLocalTime().ToString("d MMM yyyy")
++                                }
++                                else
++                                {
++                                    <span class="text-muted">None</span>
++                                }
++                            </td>
++
++                            <td class="text-end">
++                                @if (hold.IsActive && User.IsInRole(RoleNames.Reception))
++                                {
++                                    <form asp-action="Cancel"
++                                          asp-route-id="@hold.ReservationId"
++                                          method="post"
++                                          class="d-inline">
++
++                                        <button type="submit"
++                                                class="btn btn-sm btn-outline-danger"
++                                                aria-label="Cancel hold on @hold.ItemName for @hold.BorrowerName">
++                                            Cancel hold
++                                        </button>
++                                    </form>
++                                }
++                            </td>
++                        </tr>
++                    }
++                </tbody>
++            </table>
++        </div>
++    </div>
++}
+diff --git a/LibraryManagementSystem/Views/Holds/Place.cshtml b/LibraryManagementSystem/Views/Holds/Place.cshtml
+new file mode 100644
+index 0000000..95809f0
+--- /dev/null
++++ b/LibraryManagementSystem/Views/Holds/Place.cshtml
+@@ -0,0 +1,84 @@
++@model LibraryManagementSystem.ViewModels.PlaceHoldViewModel
++
++@{
++    ViewData["Title"] = "Place Hold";
++}
++
++<div class="row justify-content-center">
++    <div class="col-12 col-lg-8">
++        <div class="mb-4">
++            <h1>Place Hold</h1>
++
++            <p class="text-muted">
++                Reserve an item that is currently borrowed or damaged. The borrower is notified when it is ready.
++            </p>
++        </div>
++
++        <div class="card shadow-sm">
++            <div class="card-body p-4">
++                <form asp-action="Place"
++                      method="post">
++
++                    <div asp-validation-summary="ModelOnly"
++                         class="text-danger mb-3"
++                         role="alert">
++                    </div>
++
++                    <div class="mb-3">
++                        <label asp-for="LibraryCode"
++                               class="form-label">
++                        </label>
++
++                        <input asp-for="LibraryCode"
++                               class="form-control"
++                               placeholder="Example: BK-1001"
++                               autocomplete="off" />
++
++                        <span asp-validation-for="LibraryCode"
++                              class="text-danger">
++                        </span>
++
++                        <div class="form-text">
++                            Enter the code of the borrowed or damaged item.
++                        </div>
++                    </div>
++
++                    <div class="mb-4">
++                        <label asp-for="BorrowerCode"
++                               class="form-label">
++                        </label>
++
++                        <input asp-for="BorrowerCode"
++                               class="form-control"
++                               placeholder="Example: BR-1001"
++                               autocomplete="off" />
++
++                        <span asp-validation-for="BorrowerCode"
++                              class="text-danger">
++                        </span>
++
++                        <div class="form-text">
++                            The borrower must exist and have an active account.
++                        </div>
++                    </div>
++
++                    <div class="d-flex flex-wrap gap-2">
++                        <button type="submit"
++                                class="btn btn-primary">
++                            Place Hold
++                        </button>
++
++                        <a asp-action="Index"
++                           class="btn btn-outline-secondary">
++                            Cancel
++                        </a>
++                    </div>
++                </form>
++            </div>
++        </div>
++    </div>
++</div>
++
++@section Scripts {
++    <partial name="_ValidationScriptsPartial" />
++}
+diff --git a/LibraryManagementSystem/Views/Notifications/Index.cshtml b/LibraryManagementSystem/Views/Notifications/Index.cshtml
+new file mode 100644
+index 0000000..675d98f
+--- /dev/null
++++ b/LibraryManagementSystem/Views/Notifications/Index.cshtml
+@@ -0,0 +1,205 @@
++@using LibraryManagementSystem.Models
++@model LibraryManagementSystem.ViewModels.NotificationsIndexViewModel
++
++@{
++    ViewData["Title"] = "Notification Log";
++}
++
++<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
++    <div>
++        <h1 class="mb-1">Notification Log</h1>
++        <p class="text-muted mb-0">
++            Simulated emails and SMS messages. Nothing is sent outside the system.
++        </p>
++    </div>
++
++    <form asp-action="RunChecks"
++          method="post">
++
++        <button type="submit"
++                class="btn btn-outline-primary">
++            Run reminder checks now
++        </button>
++    </form>
++</div>
++
++@if (TempData["SuccessMessage"] is string successMessage)
++{
++    <div class="alert alert-success alert-dismissible fade show"
++         role="alert">
++        @successMessage
++
++        <button type="button"
++                class="btn-close"
++                data-bs-dismiss="alert"
++                aria-label="Close">
++        </button>
++    </div>
++}
++
++<div class="card shadow-sm mb-4">
++    <div class="card-body">
++        <form asp-action="Index"
++              method="get"
++              class="row g-3 align-items-end">
++
++            <div class="col-12 col-lg-5">
++                <label for="searchTerm"
++                       class="form-label">
++                    Search
++                </label>
++
++                <input id="searchTerm"
++                       name="searchTerm"
++                       value="@Model.SearchTerm"
++                       class="form-control"
++                       placeholder="Borrower code, name, email, phone or subject" />
++            </div>
++
++            <div class="col-12 col-sm-6 col-lg-2">
++                <label for="channel"
++                       class="form-label">
++                    Channel
++                </label>
++
++                <select id="channel"
++                        name="channel"
++                        class="form-select">
++
++                    <option value="">All channels</option>
++
++                    <option value="Email"
++                            selected="@(Model.SelectedChannel == "Email")">
++                        Email
++                    </option>
++
++                    <option value="Sms"
++                            selected="@(Model.SelectedChannel == "Sms")">
++                        SMS
++                    </option>
++                </select>
++            </div>
++
++            <div class="col-12 col-sm-6 col-lg-3">
++                <label for="eventType"
++                       class="form-label">
++                    Event
++                </label>
++
++                <select id="eventType"
++                        name="eventType"
++                        class="form-select">
++
++                    <option value="">All events</option>
++
++                    <option value="Borrowed"
++                            selected="@(Model.SelectedEvent == "Borrowed")">
++                        Borrowed
++                    </option>
++
++                    <option value="DueSoon"
++                            selected="@(Model.SelectedEvent == "DueSoon")">
++                        Due soon
++                    </option>
++
++                    <option value="Overdue"
++                            selected="@(Model.SelectedEvent == "Overdue")">
++                        Overdue
++                    </option>
++
++                    <option value="FineAssessed"
++                            selected="@(Model.SelectedEvent == "FineAssessed")">
++                        Fine assessed
++                    </option>
++
++                    <option value="HoldReady"
++                            selected="@(Model.SelectedEvent == "HoldReady")">
++                        Hold ready
++                    </option>
++                </select>
++            </div>
++
++            <div class="col-12 col-lg-2">
++                <div class="d-flex gap-2">
++                    <button type="submit"
++                            class="btn btn-primary flex-grow-1">
++                        Search
++                    </button>
++
++                    <a asp-action="Index"
++                       class="btn btn-outline-secondary">
++                        Clear
++                    </a>
++                </div>
++            </div>
++        </form>
++    </div>
++</div>
++
++@if (!Model.Notifications.Any())
++{
++    <div class="card shadow-sm">
++        <div class="card-body text-center py-5">
++            <h2 class="h4">No messages found</h2>
++
++            <p class="text-muted mb-0">
++                Messages appear here when items are borrowed, become due, accrue fines or are ready to collect.
++            </p>
++        </div>
++    </div>
++}
++else
++{
++    <p class="text-muted">
++        Showing @Model.Notifications.Count of @Model.TotalMatching message(s), newest first.
++    </p>
++
++    <div class="card shadow-sm">
++        <div class="table-responsive">
++            <table class="table table-hover align-middle mb-0">
++                <caption class="visually-hidden">
++                    Simulated notification messages, newest first
++                </caption>
++
++                <thead class="table-light">
++                    <tr>
++                        <th scope="col">Sent</th>
++                        <th scope="col">Channel</th>
++                        <th scope="col">Event</th>
++                        <th scope="col">To</th>
++                        <th scope="col">Message</th>
++                    </tr>
++                </thead>
++
++                <tbody>
++                    @foreach (var notification in Model.Notifications)
++                    {
++                        <tr>
++                            <td class="text-nowrap">
++                                @notification.CreatedAt.ToLocalTime().ToString("d MMM yyyy HH:mm")
++                            </td>
++
++                            <td>
++                                <span class="badge @(notification.Channel == NotificationChannel.Email ? "bg-primary" : "bg-info text-dark")">
++                                    @(notification.Channel == NotificationChannel.Sms ? "SMS" : "Email")
++                                </span>
++                            </td>
++
++                            <td>@notification.EventType</td>
++
++                            <td>
++                                <div>@notification.Borrower.FullName</div>
++                                <div class="text-muted small">@notification.Recipient</div>
++                            </td>
++
++                            <td>
++                                <div class="fw-semibold">@notification.Subject</div>
++                                <div class="text-muted small">@notification.Body</div>
++                            </td>
++                        </tr>
++                    }
++                </tbody>
++            </table>
++        </div>
++    </div>
++}
+diff --git a/LibraryManagementSystem/Views/Reception/Index.cshtml b/LibraryManagementSystem/Views/Reception/Index.cshtml
+index 3b2d7bd..26e6884 100644
+--- a/LibraryManagementSystem/Views/Reception/Index.cshtml
++++ b/LibraryManagementSystem/Views/Reception/Index.cshtml
+@@ -86,4 +86,40 @@
+             </div>
+         </div>
+     </div>
++
++    <div class="col-12 col-md-6 col-xl-3">
++        <div class="card shadow-sm h-100">
++            <div class="card-body d-flex flex-column">
++                <h2 class="h4">Reservations</h2>
++
++                <p class="text-muted flex-grow-1">
++                    Place holds on borrowed items and view the queue.
++                </p>
++
++                <a asp-controller="Holds"
++                   asp-action="Index"
++                   class="btn btn-outline-primary">
++                    Manage Reservations
++                </a>
++            </div>
++        </div>
++    </div>
++
++    <div class="col-12 col-md-6 col-xl-3">
++        <div class="card shadow-sm h-100">
++            <div class="card-body d-flex flex-column">
++                <h2 class="h4">Notification Log</h2>
++
++                <p class="text-muted flex-grow-1">
++                    See the simulated emails and SMS messages sent to borrowers.
++                </p>
++
++                <a asp-controller="Notifications"
++                   asp-action="Index"
++                   class="btn btn-outline-secondary">
++                    View Notification Log
++                </a>
++            </div>
++        </div>
++    </div>
+ </div>
+\ No newline at end of file
+diff --git a/LibraryManagementSystem/Views/Shared/_Layout.cshtml b/LibraryManagementSystem/Views/Shared/_Layout.cshtml
+index 68e170a..544ce3f 100644
+--- a/LibraryManagementSystem/Views/Shared/_Layout.cshtml
++++ b/LibraryManagementSystem/Views/Shared/_Layout.cshtml
+@@ -100,6 +100,26 @@
+                             </li>
+                         }
+ 
++                        @if (User.IsInRole(RoleNames.Reception) ||
++                             User.IsInRole(RoleNames.Manager))
++                        {
++                            <li class="nav-item">
++                                <a class="nav-link"
++                                   asp-controller="Holds"
++                                   asp-action="Index">
++                                    Reservations
++                                </a>
++                            </li>
++
++                            <li class="nav-item">
++                                <a class="nav-link"
++                                   asp-controller="Notifications"
++                                   asp-action="Index">
++                                    Notification Log
++                                </a>
++                            </li>
++                        }
++
+                         <li class="nav-item">
+                             <a class="nav-link"
+                                asp-controller="Home"
+diff --git a/LibraryManagementSystem/appsettings.json b/LibraryManagementSystem/appsettings.json
+index 949578b..3ed02be 100644
+--- a/LibraryManagementSystem/appsettings.json
++++ b/LibraryManagementSystem/appsettings.json
+@@ -7,6 +7,16 @@
+     "DailyLateFee": 2.00,
+     "MaximumFine": 100.00
+   },
++  "ReservationSettings": {
++    "PickupDays": 3
++  },
++  "DemoData": {
++    "SeedReservationScenario": false
++  },
++  "NotificationSettings": {
++    "DueSoonDays": 2,
++    "CheckIntervalMinutes": 60
++  },
+   "Logging": {
+     "LogLevel": {
+       "Default": "Information",

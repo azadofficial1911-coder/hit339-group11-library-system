@@ -1,5 +1,6 @@
 using LibraryManagementSystem.Data;
 using LibraryManagementSystem.Models;
+using LibraryManagementSystem.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +11,14 @@ namespace LibraryManagementSystem.Controllers
     public class MusicsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IReservationService _reservations;
 
-        public MusicsController(ApplicationDbContext context)
+        public MusicsController(
+            ApplicationDbContext context,
+            IReservationService reservations)
         {
             _context = context;
+            _reservations = reservations;
         }
 
         // Displays music items and supports searching and filtering.
@@ -151,6 +156,9 @@ namespace LibraryManagementSystem.Controllers
                 return NotFound();
             }
 
+            // Remember the old status so reservations can react to a repair.
+            ItemStatus oldStatus = musicToUpdate.Status;
+
             if (await TryUpdateModelAsync(
                 musicToUpdate,
                 string.Empty,
@@ -180,6 +188,11 @@ namespace LibraryManagementSystem.Controllers
                     try
                     {
                         await _context.SaveChangesAsync();
+
+                        await _reservations.OnItemStatusChangedAsync(
+                            musicToUpdate.Id,
+                            oldStatus,
+                            musicToUpdate.Status);
 
                         TempData["SuccessMessage"] =
                             $"The music item \"{musicToUpdate.Name}\" was updated successfully.";

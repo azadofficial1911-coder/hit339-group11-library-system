@@ -14,6 +14,10 @@ namespace LibraryManagementSystem.Models
         Damaged,
 
         [Display(Name = "Destroyed")]
-        Destroyed
+        Destroyed,
+
+        // Held at the front of a reservation queue for one borrower (R5).
+        [Display(Name = "Reserved")]
+        Reserved
     }
 }

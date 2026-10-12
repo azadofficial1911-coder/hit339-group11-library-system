@@ -20,6 +20,10 @@ namespace LibraryManagementSystem.Data
 
         public DbSet<Loan> Loans { get; set; } = default!;
 
+        public DbSet<Reservation> Reservations { get; set; } = default!;
+
+        public DbSet<NotificationLog> NotificationLogs { get; set; } = default!;
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -99,6 +103,69 @@ namespace LibraryManagementSystem.Data
             // Improves borrower loan-history searches.
             builder.Entity<Loan>()
                 .HasIndex(loan => loan.BorrowerId);
+
+            // ---- R5 Reservations ----
+            builder.Entity<Reservation>()
+                .HasOne(reservation => reservation.Item)
+                .WithMany()
+                .HasForeignKey(reservation => reservation.ItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Reservation>()
+                .HasOne(reservation => reservation.Borrower)
+                .WithMany()
+                .HasForeignKey(reservation => reservation.BorrowerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Store the hold status as readable text, like ItemStatus.
+            builder.Entity<Reservation>()
+                .Property(reservation => reservation.Status)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+
+            // A borrower can have only one active hold on an item.
+            builder.Entity<Reservation>()
+                .HasIndex(reservation => new
+                {
+                    reservation.ItemId,
+                    reservation.BorrowerId
+                })
+                .IsUnique()
+                .HasFilter("[Status] IN ('Waiting', 'Ready')");
+
+            // Speeds up queue lookups for an item.
+            builder.Entity<Reservation>()
+                .HasIndex(reservation => new
+                {
+                    reservation.ItemId,
+                    reservation.Status,
+                    reservation.CreatedAt
+                });
+
+            // ---- R3 Notifications ----
+            builder.Entity<NotificationLog>()
+                .HasOne(notification => notification.Borrower)
+                .WithMany()
+                .HasForeignKey(notification => notification.BorrowerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<NotificationLog>()
+                .Property(notification => notification.Channel)
+                .HasConversion<string>()
+                .HasMaxLength(10);
+
+            builder.Entity<NotificationLog>()
+                .Property(notification => notification.EventType)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+
+            // Stops the same message being logged twice.
+            builder.Entity<NotificationLog>()
+                .HasIndex(notification => notification.DedupKey)
+                .IsUnique();
+
+            builder.Entity<NotificationLog>()
+                .HasIndex(notification => notification.CreatedAt);
         }
     }
 }

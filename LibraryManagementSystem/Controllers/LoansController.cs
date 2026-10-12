@@ -13,13 +13,19 @@ namespace LibraryManagementSystem.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IFineCalculator _fineCalculator;
+        private readonly IReservationService _reservations;
+        private readonly INotificationService _notifications;
 
         public LoansController(
             ApplicationDbContext context,
-            IFineCalculator fineCalculator)
+            IFineCalculator fineCalculator,
+            IReservationService reservations,
+            INotificationService notifications)
         {
             _context = context;
             _fineCalculator = fineCalculator;
+            _reservations = reservations;
+            _notifications = notifications;
         }
 
         // Displays active, overdue and returned loans.
@@ -150,7 +156,10 @@ namespace LibraryManagementSystem.Controllers
                 return View(model);
             }
 
-            if (item.Status != ItemStatus.Available)
+            // A Reserved item can still be issued, but only to the borrower
+            // whose hold is Ready (checked below).
+            if (item.Status != ItemStatus.Available &&
+                item.Status != ItemStatus.Reserved)
             {
                 ModelState.AddModelError(
                     nameof(model.LibraryCode),
@@ -178,6 +187,21 @@ namespace LibraryManagementSystem.Controllers
                 ModelState.AddModelError(
                     nameof(model.BorrowerCode),
                     "This borrower account is inactive.");
+
+                return View(model);
+            }
+
+            BorrowCheck borrowCheck =
+                await _reservations.CheckBorrowAllowedAsync(
+                    item.Id,
+                    borrower.Id);
+
+            if (!borrowCheck.Allowed)
+            {
+                ModelState.AddModelError(
+                    nameof(model.LibraryCode),
+                    borrowCheck.Reason ??
+                    "This item is being held for another borrower.");
 
                 return View(model);
             }
@@ -215,9 +239,15 @@ namespace LibraryManagementSystem.Controllers
 
                 item.Status = ItemStatus.Borrowed;
 
+                // If this borrower was holding the item, close their hold.
+                await _reservations.MarkCollectedAsync(item.Id, borrower.Id);
+
                 _context.Loans.Add(loan);
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+
+                // Simulated email: logged after the loan is saved.
+                await _notifications.NotifyBorrowedAsync(loan.Id);
 
                 TempData["SuccessMessage"] =
                     $"\"{item.Name}\" was issued to {borrower.FullName} successfully.";
@@ -297,8 +327,29 @@ namespace LibraryManagementSystem.Controllers
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
+                // Give the item to the first borrower in the queue, if any.
+                Reservation? promotedHold = null;
+
+                try
+                {
+                    promotedHold =
+                        await _reservations.OnItemAvailableAsync(
+                            activeLoan.ItemId);
+                }
+                catch (DbUpdateException)
+                {
+                    // The return is saved. The scheduled check will retry the allocation.
+                    TempData["ErrorMessage"] =
+                        "The item was returned, but its reservation queue " +
+                        "could not be updated yet. It will be retried automatically.";
+                }
+
                 if (fine > 0)
                 {
+                    // Simulated email and SMS for the assessed (unpaid) fine.
+                    await _notifications.NotifyFineAssessedAsync(
+                        activeLoan.Id);
+
                     TempData["SuccessMessage"] =
                         $"\"{activeLoan.Item.Name}\" was returned. " +
                         $"Late fine: {fine:C}.";
@@ -308,6 +359,12 @@ namespace LibraryManagementSystem.Controllers
                     TempData["SuccessMessage"] =
                         $"\"{activeLoan.Item.Name}\" was returned successfully. " +
                         "No late fine was charged.";
+                }
+
+                if (promotedHold != null)
+                {
+                    TempData["SuccessMessage"] +=
+                        " It is now being held for the next borrower in the queue.";
                 }
 
                 return RedirectToAction(nameof(Index));
