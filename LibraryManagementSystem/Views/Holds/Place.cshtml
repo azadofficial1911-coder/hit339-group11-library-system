@@ -1,0 +1,84 @@
+@model LibraryManagementSystem.ViewModels.PlaceHoldViewModel
+
+@{
+    ViewData["Title"] = "Place Hold";
+}
+
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="mb-4">
+            <h1>Place Hold</h1>
+
+            <p class="text-muted">
+                Reserve an item that is currently borrowed or damaged. The borrower is notified when it is ready.
+            </p>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <form asp-action="Place"
+                      method="post">
+
+                    <div asp-validation-summary="ModelOnly"
+                         class="text-danger mb-3"
+                         role="alert">
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="LibraryCode"
+                               class="form-label">
+                        </label>
+
+                        <input asp-for="LibraryCode"
+                               class="form-control"
+                               placeholder="Example: BK-1001"
+                               autocomplete="off" />
+
+                        <span asp-validation-for="LibraryCode"
+                              class="text-danger">
+                        </span>
+
+                        <div class="form-text">
+                            Enter the code of the borrowed or damaged item.
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="BorrowerCode"
+                               class="form-label">
+                        </label>
+
+                        <input asp-for="BorrowerCode"
+                               class="form-control"
+                               placeholder="Example: BR-1001"
+                               autocomplete="off" />
+
+                        <span asp-validation-for="BorrowerCode"
+                              class="text-danger">
+                        </span>
+
+                        <div class="form-text">
+                            The borrower must exist and have an active account.
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Place Hold
+                        </button>
+
+                        <a asp-action="Index"
+                           class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

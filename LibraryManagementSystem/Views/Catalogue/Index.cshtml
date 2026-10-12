@@ -90,6 +90,11 @@
                         Damaged
                     </option>
 
+                    <option value="Reserved"
+                            selected="@(Model.SelectedStatus == "Reserved")">
+                        Reserved
+                    </option>
+
                     <option value="Destroyed"
                             selected="@(Model.SelectedStatus == "Destroyed")">
                         Destroyed
@@ -146,6 +151,7 @@ else
                 ItemStatus.Borrowed => "bg-primary",
                 ItemStatus.Damaged => "bg-warning text-dark",
                 ItemStatus.Destroyed => "bg-danger",
+                ItemStatus.Reserved => "bg-info text-dark",
                 _ => "bg-secondary"
             };
 

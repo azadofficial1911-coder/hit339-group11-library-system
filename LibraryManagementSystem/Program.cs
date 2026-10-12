@@ -49,10 +49,31 @@ builder.Services.Configure<FineSettings>(
 // Register the fine calculator using Dependency Injection.
 builder.Services.AddScoped<IFineCalculator, FineCalculator>();
 
+// R3 and R5: reservation queue and simulated notifications.
+builder.Services.Configure<ReservationSettings>(
+    builder.Configuration.GetSection(ReservationSettings.SectionName)
+);
+
+builder.Services.Configure<NotificationSettings>(
+    builder.Configuration.GetSection(NotificationSettings.SectionName)
+);
+
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IReservationService, ReservationService>();
+
+// Checks for due-soon and overdue reminders while the app is running.
+builder.Services.AddHostedService<NotificationBackgroundService>();
+
 var app = builder.Build();
 
 // Create the roles and demonstration accounts.
 await IdentitySeeder.SeedAsync(app.Services);
+
+// Optional demo records for testing reservations and notifications.
+if (app.Configuration.GetValue<bool>("DemoData:SeedReservationScenario"))
+{
+    await ReservationDemoSeeder.SeedAsync(app.Services);
+}
 
 // Configure error handling.
 if (app.Environment.IsDevelopment())
