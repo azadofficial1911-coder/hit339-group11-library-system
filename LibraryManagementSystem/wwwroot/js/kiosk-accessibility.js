@@ -7,6 +7,7 @@
         }
 
         const storageKey = "librarylink.kiosk.accessibility";
+
         const preferences = {
             largeText: false,
             highContrast: false
@@ -20,7 +21,7 @@
             preferences.largeText = saved?.largeText === true;
             preferences.highContrast = saved?.highContrast === true;
         } catch {
-            // Controls still work if browser storage is unavailable.
+            // Display controls work even when storage is unavailable.
         }
 
         const style = document.createElement("style");
@@ -74,6 +75,26 @@
                 outline-offset: 4px;
             }
 
+            /* Highlight interactive elements under the mouse pointer. */
+            @media (hover: hover) {
+                button:not(:disabled):hover,
+                a:hover,
+                input:not([type="hidden"]):hover,
+                select:hover,
+                textarea:hover {
+                    outline: 3px solid #ac4800;
+                    outline-offset: 4px;
+                }
+
+                html.kiosk-high-contrast button:not(:disabled):hover,
+                html.kiosk-high-contrast a:hover,
+                html.kiosk-high-contrast input:not([type="hidden"]):hover,
+                html.kiosk-high-contrast select:hover,
+                html.kiosk-high-contrast textarea:hover {
+                    outline-color: #00ffff !important;
+                }
+            }
+
             html.kiosk-high-contrast,
             html.kiosk-high-contrast body,
             html.kiosk-high-contrast header,
@@ -95,7 +116,9 @@
             html.kiosk-high-contrast .eyebrow,
             html.kiosk-high-contrast .brand span,
             html.kiosk-high-contrast dt,
-            html.kiosk-high-contrast .badge {
+            html.kiosk-high-contrast .badge,
+            html.kiosk-high-contrast
+            #kiosk-accessibility .accessibility-label {
                 color: #fff !important;
                 border-color: #fff !important;
             }
@@ -118,10 +141,18 @@
                 color: #ffff00 !important;
             }
 
-            html.kiosk-high-contrast input:not([type="hidden"]) {
+            html.kiosk-high-contrast input:not([type="hidden"]),
+            html.kiosk-high-contrast select,
+            html.kiosk-high-contrast textarea {
                 background: #000 !important;
                 color: #fff !important;
                 border: 2px solid #fff !important;
+            }
+
+            html.kiosk-high-contrast input::placeholder,
+            html.kiosk-high-contrast textarea::placeholder {
+                color: #ddd !important;
+                opacity: 1;
             }
 
             html.kiosk-high-contrast .status,
@@ -229,7 +260,7 @@
                     JSON.stringify(preferences)
                 );
             } catch {
-                // Display changes remain available without storage.
+                // Display changes still apply without storage.
             }
 
             if (message) {
@@ -264,7 +295,6 @@
             applyPreferences("Default display restored.");
         });
 
-        // Reset preferences when a patron finishes their session.
         const endSessionForm = document.getElementById("end-session");
 
         if (endSessionForm) {
@@ -272,7 +302,7 @@
                 try {
                     sessionStorage.removeItem(storageKey);
                 } catch {
-                    // Sign-out must continue even without storage.
+                    // Sign-out continues even without storage.
                 }
             });
         }
