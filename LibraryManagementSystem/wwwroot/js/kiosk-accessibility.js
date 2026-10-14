@@ -21,7 +21,7 @@
             preferences.largeText = saved?.largeText === true;
             preferences.highContrast = saved?.highContrast === true;
         } catch {
-            // Display controls work even when storage is unavailable.
+            // Controls still work without browser storage.
         }
 
         const style = document.createElement("style");
@@ -70,29 +70,48 @@
                 color: white;
             }
 
-            #kiosk-accessibility button:focus-visible {
-                outline: 3px solid #9b4700;
-                outline-offset: 4px;
+            button,
+            a.button {
+                transform-origin: center;
+                transition:
+                    transform 160ms ease,
+                    box-shadow 160ms ease;
             }
 
-            /* Highlight interactive elements under the mouse pointer. */
-            @media (hover: hover) {
+            /* Mouse hover: make buttons slightly larger. */
+            @media (hover: hover) and (pointer: fine) {
                 button:not(:disabled):hover,
-                a:hover,
+                a.button:hover {
+                    transform: scale(1.04);
+                    box-shadow: 0 8px 20px rgba(7, 63, 55, 0.18);
+                }
+
+                button:not(:disabled):active,
+                a.button:active {
+                    transform: scale(1.01);
+                }
+
                 input:not([type="hidden"]):hover,
                 select:hover,
                 textarea:hover {
-                    outline: 3px solid #ac4800;
-                    outline-offset: 4px;
+                    outline: 2px solid #ac4800;
+                    outline-offset: 3px;
                 }
 
-                html.kiosk-high-contrast button:not(:disabled):hover,
-                html.kiosk-high-contrast a:hover,
-                html.kiosk-high-contrast input:not([type="hidden"]):hover,
-                html.kiosk-high-contrast select:hover,
-                html.kiosk-high-contrast textarea:hover {
-                    outline-color: #00ffff !important;
+                a:not(.button):hover {
+                    text-decoration: underline;
+                    text-underline-offset: 4px;
                 }
+            }
+
+            /* Keep keyboard focus clearly visible. */
+            button:focus-visible,
+            a:focus-visible,
+            input:focus-visible,
+            select:focus-visible,
+            textarea:focus-visible {
+                outline: 3px solid #ac4800;
+                outline-offset: 5px;
             }
 
             html.kiosk-high-contrast,
@@ -172,6 +191,22 @@
                 outline-offset: 5px;
             }
 
+            @media (hover: hover) and (pointer: fine) {
+                html.kiosk-high-contrast button:not(:disabled):hover,
+                html.kiosk-high-contrast a.button:hover {
+                    outline: 2px solid #00ffff;
+                    outline-offset: 4px;
+                    box-shadow: none;
+                }
+
+                html.kiosk-high-contrast
+                input:not([type="hidden"]):hover,
+                html.kiosk-high-contrast select:hover,
+                html.kiosk-high-contrast textarea:hover {
+                    outline-color: #00ffff !important;
+                }
+            }
+
             .kiosk-sr-only {
                 position: absolute;
                 width: 1px;
@@ -184,9 +219,16 @@
                 border: 0;
             }
 
+            /* Respect the user's reduced-motion preference. */
             @media (prefers-reduced-motion: reduce) {
                 html {
                     scroll-behavior: auto !important;
+                }
+
+                button,
+                a.button {
+                    transition: none !important;
+                    transform: none !important;
                 }
             }
         `;
@@ -260,7 +302,7 @@
                     JSON.stringify(preferences)
                 );
             } catch {
-                // Display changes still apply without storage.
+                // Display changes remain available without storage.
             }
 
             if (message) {
@@ -302,7 +344,7 @@
                 try {
                     sessionStorage.removeItem(storageKey);
                 } catch {
-                    // Sign-out continues even without storage.
+                    // Sign-out must continue without storage.
                 }
             });
         }
