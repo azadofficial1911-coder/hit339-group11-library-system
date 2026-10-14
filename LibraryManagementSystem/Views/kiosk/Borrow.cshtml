@@ -1,0 +1,455 @@
+﻿@model LibraryManagementSystem.ViewModels.KioskBorrowViewModel
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Borrow an item | LibraryLink NT</title>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: #f5f3ed;
+            color: #173536;
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            line-height: 1.6;
+        }
+
+        :focus-visible {
+            outline: 3px solid #9b4700;
+            outline-offset: 5px;
+        }
+
+        .skip-link {
+            position: absolute;
+            top: -100px;
+            left: 16px;
+            background: white;
+            color: #075c56;
+            padding: 16px;
+            z-index: 10;
+        }
+
+        .skip-link:focus { top: 16px; }
+
+        header {
+            padding: 20px clamp(20px, 5vw, 72px);
+            border-bottom: 1px solid #d4ddd6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .brand {
+            font-size: 1.35rem;
+            font-weight: 800;
+        }
+
+        .brand span { color: #08766b; }
+
+        main {
+            max-width: 720px;
+            padding: 40px 24px;
+            margin: auto;
+        }
+
+        a { color: #075c56; }
+
+        .back {
+            display: inline-flex;
+            align-items: center;
+            min-height: 48px;
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+
+        .eyebrow {
+            font-size: .85rem;
+            font-weight: 750;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            color: #075c56;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            line-height: 1.15;
+            letter-spacing: -.04em;
+            margin: 12px 0 20px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #d4ddd6;
+            border-radius: 24px;
+            padding: clamp(24px, 5vw, 40px);
+            margin-top: 24px;
+        }
+
+        .muted { color: #435b59; }
+
+        label {
+            display: block;
+            font-weight: 750;
+            margin-bottom: 10px;
+        }
+
+        input:not([type="hidden"]) {
+            width: 100%;
+            min-height: 64px;
+            padding: 16px;
+            border: 2px solid #718680;
+            border-radius: 12px;
+            color: #173536;
+            background: white;
+            font: inherit;
+            font-size: 1.2rem;
+        }
+
+        .error {
+            display: block;
+            color: #a12622;
+            font-weight: 650;
+            margin-top: 8px;
+        }
+
+        input.input-validation-error {
+            border-color: #a12622;
+        }
+
+        button, .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 56px;
+            padding: 14px 24px;
+            border: 0;
+            border-radius: 12px;
+            background: #075c56;
+            color: white;
+            font: inherit;
+            font-weight: 750;
+            text-decoration: none;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        button:hover, .button:hover {
+            background: #03433f;
+        }
+
+        button:disabled {
+            opacity: .7;
+            cursor: wait;
+        }
+
+        .primary {
+            width: 100%;
+            margin-top: 24px;
+        }
+
+        .secondary {
+            background: #e3efe8;
+            color: #173536;
+        }
+
+        .secondary:hover { background: #cbded2; }
+
+        .notice {
+            padding: 16px 20px;
+            background: #e6f2eb;
+            border-radius: 12px;
+            margin-top: 24px;
+            overflow-wrap: anywhere;
+        }
+
+        dl { margin: 24px 0; }
+
+        dt {
+            color: #435b59;
+            margin-top: 20px;
+        }
+
+        dd {
+            margin: 4px 0 0;
+            font-size: 1.2rem;
+            font-weight: 750;
+            overflow-wrap: anywhere;
+        }
+
+        dialog {
+            width: min(90%, 480px);
+            border: 1px solid #d4ddd6;
+            border-radius: 20px;
+            padding: 28px;
+            color: #173536;
+        }
+
+        dialog::backdrop { background: #102c2bd9; }
+
+        dialog button {
+            width: 100%;
+            margin-top: 12px;
+        }
+
+        footer {
+            text-align: center;
+            color: #435b59;
+            padding: 24px;
+        }
+    </style>
+</head>
+
+<body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <header>
+        <div class="brand">LibraryLink <span>NT</span></div>
+
+        <form method="post"
+              action="@Url.Action("EndSession", "Kiosk")"
+              id="end-session">
+            @Html.AntiForgeryToken()
+            <button type="submit">Finish session</button>
+        </form>
+    </header>
+
+    <main id="main-content" tabindex="-1">
+        <a href="@Url.Action("Account", "Kiosk")" class="back">
+            ← Back to my account
+        </a>
+
+        <div class="eyebrow">Self-service borrowing</div>
+
+        @if (TempData["KioskMessage"] is string message)
+        {
+            <div class="notice" role="status">@message</div>
+        }
+
+        @if (Model.ReadyToConfirm)
+        {
+            <h1>Check your item.</h1>
+
+            <p class="muted">
+                Review the details before confirming your loan.
+            </p>
+
+            <section class="card" aria-label="Loan details">
+                <dl>
+                    <dt>Library item</dt>
+                    <dd>@Model.ItemName</dd>
+
+                    <dt>Item code</dt>
+                    <dd>@Model.LibraryCode</dd>
+
+                    <dt>Return by</dt>
+                    <dd>
+                        @(Model.DueDate?.ToString("dd MMM yyyy"))
+                    </dd>
+                </dl>
+
+                <form method="post"
+                      action="@Url.Action("Confirm", "Kiosk")"
+                      id="confirm-loan">
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           name="confirmationToken"
+                           value="@Model.ConfirmationToken" />
+
+                    <button type="submit" class="primary">
+                        Confirm borrowing
+                    </button>
+                </form>
+
+                <a href="@Url.Action("Borrow", "Kiosk")"
+                   class="button secondary primary">
+                    Choose a different item
+                </a>
+            </section>
+        }
+        else
+        {
+            <h1>Your next discovery starts here.</h1>
+
+            <p class="muted">
+                Scan or enter the library code attached to your item.
+                Books, music and toys use the same process.
+            </p>
+
+            <section class="card" aria-label="Item code entry">
+                <form method="post"
+                      action="@Url.Action("Review", "Kiosk")">
+                    @Html.AntiForgeryToken()
+
+                    <label for="LibraryCode">Item library code</label>
+
+                    <input id="LibraryCode"
+                           name="LibraryCode"
+                           value="@Model.LibraryCode"
+                           type="text"
+                           maxlength="20"
+                           required
+                           autocomplete="off"
+                           autocapitalize="characters"
+                           spellcheck="false"
+                           aria-describedby="item-help item-error" />
+
+                    <div id="item-error" class="error">
+                        @Html.ValidationMessageFor(m => m.LibraryCode)
+                    </div>
+
+                    <p class="muted" id="item-help">
+                        Select the field, then use a connected USB
+                        barcode scanner or type the item’s library code.
+                        Use the library label rather than its ISBN.
+                    </p>
+
+                    <button type="submit" class="primary">
+                        Review this item →
+                    </button>
+                </form>
+            </section>
+        }
+
+        <p class="muted">
+            Need assistance? Ask the library service desk.
+        </p>
+
+        <noscript>
+            <p>
+                Use “Finish session” before leaving.
+                Automatic screen clearing requires JavaScript.
+            </p>
+        </noscript>
+    </main>
+
+    <dialog id="timeout-dialog"
+            aria-labelledby="timeout-heading"
+            aria-describedby="timeout-description">
+        <h2 id="timeout-heading">Are you still here?</h2>
+
+        <p id="timeout-description">
+            Your session will finish in
+            <strong id="seconds-left">30</strong> seconds.
+            Continuing will return you to item entry.
+        </p>
+
+        <button type="button" id="continue-session">
+            Continue my session
+        </button>
+
+        <button type="button" id="finish-now" class="secondary">
+            Finish now
+        </button>
+    </dialog>
+
+    <footer>LibraryLink NT · Self-service kiosk</footer>
+
+    <script>
+        (() => {
+            const endForm = document.getElementById("end-session");
+            const dialog = document.getElementById("timeout-dialog");
+            const continueButton =
+                document.getElementById("continue-session");
+            const seconds = document.getElementById("seconds-left");
+            const borrowUrl = '@Url.Action("Borrow", "Kiosk")';
+
+            let lastActivity = Date.now();
+            let ending = false;
+            let submitting = false;
+
+            function finish() {
+                if (ending || submitting) return;
+
+                ending = true;
+                document.body.style.visibility = "hidden";
+                endForm.requestSubmit();
+            }
+
+            function activity() {
+                if (!dialog.open && !ending) {
+                    lastActivity = Date.now();
+                }
+            }
+
+            ["pointerdown", "keydown", "touchstart"].forEach(event => {
+                document.addEventListener(event, activity, {
+                    passive: true
+                });
+            });
+
+            continueButton.addEventListener("click", () => {
+                window.location.replace(borrowUrl);
+            });
+
+            document.getElementById("finish-now")
+                .addEventListener("click", finish);
+
+            dialog.addEventListener("cancel", event => {
+                event.preventDefault();
+            });
+
+            function checkTimeout() {
+                if (ending || submitting) return;
+
+                const elapsed = Date.now() - lastActivity;
+
+                if (elapsed >= 90000) {
+                    finish();
+                    return;
+                }
+
+                if (elapsed >= 60000) {
+                    seconds.textContent =
+                        Math.ceil((90000 - elapsed) / 1000);
+
+                    if (!dialog.open) {
+                        dialog.showModal();
+                        continueButton.focus();
+                    }
+                }
+            }
+
+            setInterval(checkTimeout, 1000);
+            document.addEventListener("visibilitychange", checkTimeout);
+
+            window.addEventListener("pageshow", event => {
+                if (event.persisted) {
+                    window.location.replace(borrowUrl);
+                }
+            });
+
+            const confirmation =
+                document.getElementById("confirm-loan");
+
+            if (confirmation) {
+                confirmation.addEventListener("submit", event => {
+                    if (submitting) {
+                        event.preventDefault();
+                        return;
+                    }
+
+                    submitting = true;
+
+                    const button =
+                        confirmation.querySelector("button");
+
+                    button.disabled = true;
+                    button.textContent = "Processing…";
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

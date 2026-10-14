@@ -1,0 +1,467 @@
+﻿@model LibraryManagementSystem.ViewModels.KioskAccountViewModel
+@using System.Globalization
+
+@{
+    Layout = null;
+    var currency = CultureInfo.GetCultureInfo("en-AU");
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>My account | LibraryLink NT</title>
+
+    <style>
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                background: #f5f3ed;
+                color: #173536;
+                font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+                line-height: 1.6;
+            }
+
+            :focus-visible {
+                outline: 3px solid #9b4700;
+                outline-offset: 5px;
+            }
+
+            .skip-link {
+                position: absolute;
+                left: 16px;
+                top: -100px;
+                padding: 16px;
+                background: white;
+                color: #075c56;
+                z-index: 10;
+            }
+
+                .skip-link:focus {
+                    top: 16px;
+                }
+
+            header {
+                padding: 20px clamp(20px, 5vw, 72px);
+                border-bottom: 1px solid #d4ddd6;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 16px;
+            }
+
+            .brand {
+                font-size: 1.35rem;
+                font-weight: 800;
+                letter-spacing: -.04em;
+            }
+
+                .brand span {
+                    color: #08766b;
+                }
+
+            button,
+            .button {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 56px;
+                padding: 14px 24px;
+                border: 0;
+                border-radius: 12px;
+                background: #075c56;
+                color: white;
+                font: inherit;
+                font-weight: 750;
+                text-decoration: none;
+                text-align: center;
+                cursor: pointer;
+            }
+
+                button:hover,
+                .button:hover {
+                    background: #03433f;
+                }
+
+            main {
+                max-width: 1100px;
+                margin: auto;
+                padding: 40px 24px;
+            }
+
+            .eyebrow {
+                color: #075c56;
+                font-weight: 750;
+                text-transform: uppercase;
+                letter-spacing: .12em;
+                font-size: .85rem;
+            }
+
+            h1 {
+                font-size: clamp(2rem, 5vw, 3.5rem);
+                line-height: 1.15;
+                letter-spacing: -.04em;
+                margin: 12px 0;
+                overflow-wrap: anywhere;
+            }
+
+            .muted {
+                color: #435b59;
+            }
+
+            .actions {
+                margin: 24px 0;
+            }
+
+            .summary {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 20px;
+                margin: 32px 0;
+            }
+
+            .card {
+                background: white;
+                border: 1px solid #d4ddd6;
+                border-radius: 20px;
+                padding: 24px;
+                min-width: 0;
+            }
+
+            .value {
+                display: block;
+                font-size: 2.5rem;
+                font-weight: 800;
+                letter-spacing: -.04em;
+                overflow-wrap: anywhere;
+            }
+
+            h2 {
+                margin-top: 0;
+            }
+
+            .loans {
+                display: grid;
+                gap: 16px;
+            }
+
+            .loan {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 20px;
+                flex-wrap: wrap;
+            }
+
+                .loan h3 {
+                    margin: 0 0 6px;
+                    overflow-wrap: anywhere;
+                }
+
+                .loan p {
+                    margin: 0;
+                    overflow-wrap: anywhere;
+                }
+
+            .status {
+                display: inline-block;
+                padding: 6px 14px;
+                border-radius: 100px;
+                background: #e3efe8;
+                color: #234c39;
+                font-weight: 700;
+            }
+
+            .overdue {
+                background: #fce9e5;
+                color: #922820;
+            }
+
+            .notice {
+                border-left: 4px solid #075c56;
+                padding: 16px 20px;
+                background: #e6f2eb;
+                border-radius: 8px;
+                margin: 28px 0;
+                overflow-wrap: anywhere;
+            }
+
+            dialog {
+                width: min(90%, 480px);
+                border: 1px solid #d4ddd6;
+                border-radius: 20px;
+                padding: 28px;
+                color: #173536;
+            }
+
+                dialog::backdrop {
+                    background: #102c2bd9;
+                }
+
+                dialog button {
+                    width: 100%;
+                    margin-top: 12px;
+                }
+
+            .secondary {
+                background: #e3efe8;
+                color: #173536;
+            }
+
+                .secondary:hover {
+                    background: #cbded2;
+                }
+
+            footer {
+                padding: 24px;
+                text-align: center;
+                color: #435b59;
+            }
+
+            @@media (max-width: 540px) {
+                .summary {
+                    grid-template-columns: 1fr;
+                }
+
+                .actions .button {
+                    width: 100%;
+                }
+            }
+    </style>
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">
+        Skip to main content
+    </a>
+
+    <header>
+        <div class="brand">
+            LibraryLink <span>NT</span>
+        </div>
+
+        <form method="post"
+              action="@Url.Action("EndSession", "Kiosk")"
+              id="end-session">
+            @Html.AntiForgeryToken()
+
+            <button type="submit">
+                Finish session
+            </button>
+        </form>
+    </header>
+
+    <main id="main-content" tabindex="-1">
+        <div class="eyebrow">Your library account</div>
+
+        <h1>Hello, @Model.FirstName.</h1>
+
+        <p class="muted">
+            Borrow an item or check your current loans and due dates.
+        </p>
+
+        @if (TempData["KioskMessage"] is string message)
+        {
+            <div class="notice" role="status">
+                @message
+            </div>
+        }
+
+        <nav class="actions" aria-label="Account actions">
+            <a href="@Url.Action("Borrow", "Kiosk")"
+               class="button">
+                Borrow an item →
+            </a>
+        </nav>
+
+        <div class="summary">
+            <section class="card" aria-label="Active loans">
+                <span class="muted">Items on loan</span>
+
+                <strong class="value">
+                    @Model.ActiveLoans.Count
+                </strong>
+            </section>
+
+            <section class="card"
+                     aria-label="Unpaid assessed fines">
+                <span class="muted">Unpaid assessed fines</span>
+
+                <strong class="value">
+                    @Model.OutstandingFines.ToString("C", currency)
+                </strong>
+
+                <small class="muted">
+                    Additional charges may apply when overdue items return.
+                </small>
+            </section>
+        </div>
+
+        <section aria-labelledby="loans-heading">
+            <h2 id="loans-heading">My borrowed items</h2>
+
+            @if (Model.ActiveLoans.Count == 0)
+            {
+                <div class="card">
+                    <h3>No items on loan</h3>
+
+                    <p class="muted">
+                        Your account currently has no active loans.
+                        Select “Borrow an item” to get started.
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div class="loans">
+                    @foreach (var loan in Model.ActiveLoans)
+                    {
+                        <article class="card loan">
+                            <div>
+                                <h3>@loan.ItemName</h3>
+
+                                <p class="muted">
+                                    Code: @loan.LibraryCode
+                                </p>
+
+                                <p>
+                                    Due
+                                    <time datetime="@loan.DueDate.ToString("yyyy-MM-dd")">
+                                        @loan.DueDate.ToString("dd MMM yyyy")
+                                    </time>
+                                </p>
+                            </div>
+
+                            <span class="status @(loan.IsOverdue ? "overdue" : "")">
+                                @(loan.IsOverdue ? "Overdue" : "On loan")
+                            </span>
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+
+        <aside class="notice" aria-label="Help">
+            <strong>Need help?</strong>
+            Visit the service desk for account questions or fine payments.
+            Finish your session before leaving.
+        </aside>
+
+        <noscript>
+            <p>
+                Automatic screen clearing requires JavaScript.
+                Use “Finish session” before leaving this kiosk.
+            </p>
+        </noscript>
+    </main>
+
+    <dialog id="timeout-dialog"
+            aria-labelledby="timeout-heading"
+            aria-describedby="timeout-description">
+        <h2 id="timeout-heading">Are you still here?</h2>
+
+        <p id="timeout-description">
+            Your session will finish in
+            <strong id="seconds-left">30</strong> seconds.
+        </p>
+
+        <button type="button" id="continue-session">
+            Yes, keep my session open
+        </button>
+
+        <button type="button"
+                id="finish-now"
+                class="secondary">
+            Finish now
+        </button>
+    </dialog>
+
+    <footer>
+        LibraryLink NT · Self-service kiosk
+    </footer>
+
+    <script>
+            (() => {
+                const form = document.getElementById("end-session");
+                const dialog = document.getElementById("timeout-dialog");
+                const seconds = document.getElementById("seconds-left");
+                const continueButton =
+                    document.getElementById("continue-session");
+
+                let lastActivity = Date.now();
+                let ending = false;
+
+                function finish() {
+                    if (ending) return;
+
+                    ending = true;
+                    document.body.style.visibility = "hidden";
+                    form.requestSubmit();
+                }
+
+                function activity() {
+                    if (!dialog.open && !ending) {
+                        lastActivity = Date.now();
+                    }
+                }
+
+                ["pointerdown", "keydown", "touchstart"].forEach(event => {
+                    document.addEventListener(event, activity, {
+                        passive: true
+                    });
+                });
+
+                continueButton.addEventListener("click", () => {
+                    window.location.reload();
+                });
+
+                document.getElementById("finish-now")
+                    .addEventListener("click", finish);
+
+                dialog.addEventListener("cancel", event => {
+                    event.preventDefault();
+                });
+
+                function checkTimeout() {
+                    if (ending) return;
+
+                    const elapsed = Date.now() - lastActivity;
+
+                    if (elapsed >= 90000) {
+                        finish();
+                        return;
+                    }
+
+                    if (elapsed >= 60000) {
+                        seconds.textContent =
+                            Math.ceil((90000 - elapsed) / 1000);
+
+                        if (!dialog.open) {
+                            dialog.showModal();
+                            continueButton.focus();
+                        }
+                    }
+                }
+
+                setInterval(checkTimeout, 1000);
+
+                document.addEventListener(
+                    "visibilitychange",
+                    checkTimeout
+                );
+
+                window.addEventListener("pageshow", event => {
+                    if (event.persisted) {
+                        window.location.reload();
+                    }
+                });
+            })();
+    </script>
+</body>
+</html>
