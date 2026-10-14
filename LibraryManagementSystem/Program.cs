@@ -1,25 +1,23 @@
 using LibraryManagementSystem.Data;
 using LibraryManagementSystem.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Read the SQL Server connection string.
+// Database configuration.
 string connectionString =
     builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException(
-        "Connection string 'DefaultConnection' was not found."
-    );
+        "Connection string 'DefaultConnection' was not found.");
 
-// Register Entity Framework and the application database.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString)
-);
+    options.UseSqlServer(connectionString));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-// Configure ASP.NET Core Identity, password security and roles.
+// Authentication and roles.
 builder.Services
     .AddDefaultIdentity<IdentityUser>(options =>
     {
@@ -38,30 +36,52 @@ builder.Services
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
-// Register MVC controllers and Razor views.
+// MVC pages and controllers.
 builder.Services.AddControllersWithViews();
 
-// Load the fine rules from appsettings.json.
-builder.Services.Configure<FineSettings>(
-    builder.Configuration.GetSection(FineSettings.SectionName)
-);
+// Kiosk session storage.
+builder.Services.AddDistributedMemoryCache();
 
-// Register the fine calculator using Dependency Injection.
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(2);
+
+    options.Cookie.Name = ".LibraryLink.Kiosk";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+
+    // Allows local HTTP development and protects cookies on HTTPS.
+    options.Cookie.SecurePolicy =
+        builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
+});
+
+// Fine calculation.
+builder.Services.Configure<FineSettings>(
+    builder.Configuration.GetSection(FineSettings.SectionName));
+
 builder.Services.AddScoped<IFineCalculator, FineCalculator>();
 
-// R3 and R5: reservation queue and simulated notifications.
+// Reservations and notification settings.
 builder.Services.Configure<ReservationSettings>(
-    builder.Configuration.GetSection(ReservationSettings.SectionName)
-);
+    builder.Configuration.GetSection(
+        ReservationSettings.SectionName));
 
 builder.Services.Configure<NotificationSettings>(
-    builder.Configuration.GetSection(NotificationSettings.SectionName)
-);
+    builder.Configuration.GetSection(
+        NotificationSettings.SectionName));
 
-builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddScoped<IReservationService, ReservationService>();
+builder.Services.AddScoped<
+    INotificationService,
+    NotificationService>();
 
-// Checks for due-soon and overdue reminders while the app is running.
+builder.Services.AddScoped<
+    IReservationService,
+    ReservationService>();
+
+// Automatically check for loan reminders while the app runs.
 builder.Services.AddHostedService<NotificationBackgroundService>();
 
 // Register the CSV import preview service.
@@ -71,16 +91,7 @@ builder.Services.AddScoped<ReportService>();
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 var app = builder.Build();
 
-// Create the roles and demonstration accounts.
-await IdentitySeeder.SeedAsync(app.Services);
-
-// Optional demo records for testing reservations and notifications.
-if (app.Configuration.GetValue<bool>("DemoData:SeedReservationScenario"))
-{
-    await ReservationDemoSeeder.SeedAsync(app.Services);
-}
-
-// Configure error handling.
+// Error handling.
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
@@ -92,23 +103,34 @@ else
 }
 
 app.UseHttpsRedirection();
+
 app.UseRouting();
 
-// Authentication must run before authorization.
+app.UseSession();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
 
-// Configure the standard MVC route.
+// Default MVC routing includes /Kiosk once its controller exists.
 app.MapControllerRoute(
         name: "default",
-        pattern: "{controller=Home}/{action=Index}/{id?}"
-    )
+        pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
-// Configure the Identity Razor Pages.
 app.MapRazorPages()
     .WithStaticAssets();
+
+// Create application roles and demonstration login accounts.
+// Apply database migrations before starting the application.
+await IdentitySeeder.SeedAsync(app.Services);
+
+// Optional reservation demonstration records.
+if (app.Configuration.GetValue<bool>(
+        "DemoData:SeedReservationScenario"))
+{
+    await ReservationDemoSeeder.SeedAsync(app.Services);
+}
 
 app.Run();

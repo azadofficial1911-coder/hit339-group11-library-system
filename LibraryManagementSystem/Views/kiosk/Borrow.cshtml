@@ -1,0 +1,1012 @@
+﻿@model LibraryManagementSystem.ViewModels.KioskBorrowViewModel
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#20211f" />
+
+    <title>Borrow an item | LibraryLink NT</title>
+
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            color: #242424;
+            background: #f7f5f0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            background:
+                radial-gradient(
+                    ellipse at 100% 0%,
+                    rgba(233, 188, 98, .12),
+                    transparent 45%
+                ),
+                #f7f5f0;
+            line-height: 1.65;
+        }
+
+        ::selection {
+            background: #e9bc62;
+            color: #20211f;
+        }
+
+        a {
+            color: #705016;
+            text-underline-offset: 4px;
+        }
+
+        :focus-visible {
+            outline: 3px solid #916216;
+            outline-offset: 5px;
+        }
+
+        .skip-link {
+            position: fixed;
+            top: -120px;
+            left: 20px;
+            z-index: 100;
+            padding: 14px 20px;
+            border-radius: 10px;
+            background: #e9bc62;
+            color: #20211f;
+            font-weight: 700;
+        }
+
+        .skip-link:focus {
+            top: 16px;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            max-width: 1400px;
+            margin: auto;
+            padding: 24px 5%;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #20211f;
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -.045em;
+        }
+
+        .brand-icon {
+            display: grid;
+            place-items: center;
+            width: 44px;
+            height: 46px;
+            border-radius: 12px 12px 4px 12px;
+            background: #20211f;
+            color: #e9bc62;
+        }
+
+        .brand-icon svg {
+            width: 26px;
+            height: 26px;
+        }
+
+        .brand small {
+            display: block;
+            margin-top: 3px;
+            color: #65635e;
+            font-size: .65rem;
+            font-weight: 600;
+            letter-spacing: .13em;
+        }
+
+        button,
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            min-height: 56px;
+            padding: 14px 22px;
+            border: 1px solid #e9bc62;
+            border-radius: 12px;
+            background: #e9bc62;
+            color: #20211f;
+            font: inherit;
+            font-weight: 700;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            transition:
+                transform 180ms ease,
+                background-color 180ms ease,
+                box-shadow 180ms ease;
+        }
+
+        button:hover,
+        .button:hover {
+            background: #f1cb80;
+        }
+
+        button:active,
+        .button:active {
+            transform: scale(.98);
+        }
+
+        button:disabled {
+            opacity: .7;
+            cursor: wait;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .finish-button {
+            min-height: 52px;
+            border-color: #bcb5a6;
+            background: transparent;
+            color: #34332e;
+            font-size: .85rem;
+        }
+
+        .finish-button:hover {
+            background: #eee7d8;
+        }
+
+        main {
+            width: min(90%, 1050px);
+            margin: 20px auto 40px;
+        }
+
+        .back {
+            display: inline-flex;
+            align-items: center;
+            min-height: 48px;
+            margin-bottom: 18px;
+            font-size: .85rem;
+            font-weight: 650;
+            text-decoration: none;
+        }
+
+        .back:hover {
+            text-decoration: underline;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: .8fr 1.2fr;
+            overflow: hidden;
+            border: 1px solid #e5e0d6;
+            border-radius: 26px;
+            background: #fff;
+            box-shadow: 0 20px 60px rgba(32, 33, 31, .06);
+        }
+
+        .guide {
+            min-width: 0;
+            padding: clamp(26px, 4vw, 42px);
+            background:
+                radial-gradient(
+                    ellipse at 100% 0%,
+                    rgba(233, 188, 98, .16),
+                    transparent 65%
+                ),
+                #20211f;
+            color: #fffdf6;
+        }
+
+        .eyebrow {
+            color: #e9bc62;
+            font-size: .72rem;
+            font-weight: 750;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 22px 0 18px;
+            color: #fffdf6;
+            font-size: clamp(2.2rem, 4vw, 3.3rem);
+            line-height: 1.1;
+            letter-spacing: -.055em;
+        }
+
+        h1 em {
+            color: #e9bc62;
+            font-family: Georgia, serif;
+            font-weight: 400;
+        }
+
+        .guide-copy {
+            color: #cbc9bf;
+            font-size: .9rem;
+            line-height: 1.8;
+        }
+
+        .steps {
+            display: grid;
+            gap: 24px;
+            margin: 36px 0 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .steps li {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .step-number {
+            display: grid;
+            place-items: center;
+            flex: 0 0 32px;
+            height: 32px;
+            border: 1px solid #7c6b45;
+            border-radius: 10px;
+            color: #dfd3b5;
+            font-size: .8rem;
+            font-weight: 750;
+        }
+
+        .steps [aria-current="step"] .step-number {
+            border-color: #e9bc62;
+            background: #e9bc62;
+            color: #20211f;
+        }
+
+        .step-title {
+            display: block;
+            font-size: .9rem;
+            font-weight: 700;
+        }
+
+        .step-note {
+            display: block;
+            margin-top: 4px;
+            color: #bbb9af;
+            font-size: .75rem;
+            line-height: 1.7;
+        }
+
+        .entry {
+            min-width: 0;
+            padding: clamp(24px, 4vw, 44px);
+        }
+
+        .scan-symbol {
+            display: grid;
+            place-items: center;
+            width: 60px;
+            height: 60px;
+            margin-bottom: 24px;
+            border: 1px solid #e4d5b3;
+            border-radius: 18px;
+            background: #fbf4e5;
+            color: #705016;
+        }
+
+        .scan-symbol svg {
+            width: 34px;
+            height: 34px;
+        }
+
+        h2 {
+            margin: 0 0 12px;
+            color: #20211f;
+            font-size: 1.8rem;
+            line-height: 1.2;
+            letter-spacing: -.045em;
+        }
+
+        .muted {
+            color: #65635e;
+            line-height: 1.7;
+        }
+
+        label {
+            display: block;
+            margin: 28px 0 10px;
+            font-size: .9rem;
+            font-weight: 700;
+        }
+
+        input:not([type="hidden"]) {
+            width: 100%;
+            min-height: 64px;
+            padding: 16px 18px;
+            border: 2px solid #aaa496;
+            border-radius: 12px;
+            background: #fffdf8;
+            color: #20211f;
+            font: inherit;
+            font-size: 1.1rem;
+            transition:
+                border-color 180ms ease,
+                box-shadow 180ms ease;
+        }
+
+        input:not([type="hidden"]):focus {
+            border-color: #916216;
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(145, 98, 22, .12);
+        }
+
+        input::placeholder {
+            color: #767166;
+        }
+
+        input.input-validation-error {
+            border-color: #a52834;
+        }
+
+        .help {
+            color: #65635e;
+            font-size: .8rem;
+            line-height: 1.75;
+        }
+
+        .error {
+            display: block;
+            margin-top: 8px;
+            color: #a52834;
+            font-size: .9rem;
+            line-height: 1.6;
+        }
+
+        .validation-summary-valid,
+        .field-validation-valid {
+            display: none;
+        }
+
+        .validation-summary-errors {
+            margin: 18px 0;
+            padding: 14px 18px;
+            border: 1px solid #ecc4c7;
+            border-radius: 12px;
+            background: #fff0f1;
+            color: #922f38;
+            font-size: .9rem;
+        }
+
+        .validation-summary-errors ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .primary {
+            width: 100%;
+            margin-top: 22px;
+        }
+
+        .secondary {
+            border-color: #cfc3aa;
+            background: #eee9dd;
+            color: #34332e;
+        }
+
+        .secondary:hover {
+            background: #e2dac9;
+        }
+
+        .notice {
+            margin-bottom: 24px;
+            padding: 16px 20px;
+            border: 1px solid #dfc994;
+            border-radius: 12px;
+            background: #fbf3df;
+            color: #674c17;
+            line-height: 1.7;
+            overflow-wrap: anywhere;
+        }
+
+        .item-summary {
+            margin: 26px 0 8px;
+            padding: 22px;
+            border: 1px solid #e4d8be;
+            border-radius: 16px;
+            background: #fbf8f0;
+        }
+
+        dl {
+            margin: 0;
+        }
+
+        dt {
+            margin-top: 18px;
+            color: #65635e;
+            font-size: .75rem;
+        }
+
+        dt:first-child {
+            margin-top: 0;
+        }
+
+        dd {
+            margin: 5px 0 0;
+            color: #20211f;
+            font-size: 1.05rem;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .due-date {
+            color: #705016;
+            font-size: 1.35rem;
+        }
+
+        .support {
+            margin-top: 28px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e0d6;
+        }
+
+        .support strong {
+            font-size: .85rem;
+        }
+
+        .support p {
+            margin-bottom: 0;
+        }
+
+        dialog {
+            width: min(90%, 480px);
+            padding: 30px;
+            border: 1px solid #dfd3b7;
+            border-radius: 22px;
+            background: #fffdf8;
+            color: #242424;
+            box-shadow: 0 30px 90px rgba(0, 0, 0, .25);
+        }
+
+        dialog::backdrop {
+            background: rgba(25, 25, 22, .82);
+        }
+
+        dialog p {
+            line-height: 1.7;
+        }
+
+        dialog button {
+            width: 100%;
+            margin-top: 12px;
+        }
+
+        footer {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            width: min(90%, 1050px);
+            margin: auto;
+            padding: 0 0 28px;
+            color: #65635e;
+            font-size: .75rem;
+        }
+
+        #kiosk-accessibility {
+            justify-content: flex-end;
+            gap: 8px !important;
+            width: min(90%, 1050px);
+            margin: auto;
+            padding: 8px 0 12px !important;
+            border: 0 !important;
+            background: transparent !important;
+        }
+
+        #kiosk-accessibility .accessibility-label {
+            color: #65635e;
+            font-size: .75rem;
+        }
+
+        #kiosk-accessibility button {
+            min-height: 44px !important;
+            padding: 8px 12px !important;
+            border-width: 1px !important;
+            border-radius: 9px !important;
+            font-size: .75rem !important;
+        }
+
+        html.kiosk-high-contrast .guide,
+        html.kiosk-high-contrast .entry,
+        html.kiosk-high-contrast .workspace,
+        html.kiosk-high-contrast .item-summary,
+        html.kiosk-high-contrast .scan-symbol,
+        html.kiosk-high-contrast .brand-icon,
+        html.kiosk-high-contrast dialog {
+            border-color: #fff !important;
+            background: #000 !important;
+            color: #fff !important;
+        }
+
+        html.kiosk-high-contrast h1,
+        html.kiosk-high-contrast h2,
+        html.kiosk-high-contrast h1 em,
+        html.kiosk-high-contrast dt,
+        html.kiosk-high-contrast dd,
+        html.kiosk-high-contrast .brand,
+        html.kiosk-high-contrast .brand small,
+        html.kiosk-high-contrast .eyebrow,
+        html.kiosk-high-contrast .guide-copy,
+        html.kiosk-high-contrast .step-note,
+        html.kiosk-high-contrast .step-number,
+        html.kiosk-high-contrast .step-title,
+        html.kiosk-high-contrast .due-date,
+        html.kiosk-high-contrast .accessibility-label {
+            color: #fff !important;
+        }
+
+        html.kiosk-high-contrast
+        .steps [aria-current="step"] .step-number {
+            background: #ffff00 !important;
+            color: #000 !important;
+        }
+
+        @@media (hover: hover) and (pointer: fine) {
+            button:not(:disabled):hover,
+            .button:hover {
+                transform: translateY(-2px) scale(1.04);
+                box-shadow: 0 10px 24px rgba(32, 33, 31, .14);
+            }
+        }
+
+        @@media (max-width: 760px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .guide {
+                padding: 28px;
+            }
+
+            .steps {
+                gap: 16px;
+                margin-top: 24px;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            #kiosk-accessibility {
+                justify-content: flex-start;
+            }
+        }
+
+        @@media (max-width: 420px) {
+            #end-session,
+            .finish-button {
+                width: 100%;
+            }
+
+            .entry,
+            .guide {
+                padding: 24px;
+            }
+        }
+
+        @@media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation: none !important;
+                transition: none !important;
+            }
+
+            button:hover,
+            button:active,
+            .button:hover,
+            .button:active {
+                transform: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <a class="skip-link" href="#main-content">
+        Skip to main content
+    </a>
+
+    <header>
+        <div class="brand">
+            <span class="brand-icon" aria-hidden="true">
+                <svg viewBox="0 0 32 32"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="1.8"
+                     focusable="false">
+                    <path d="M16 8C11 4 5 6 4 7v19c4-2 8-2 12 1
+                             4-3 8-3 12-1V7c-1-1-7-3-12 1Z" />
+                    <path d="M16 8v19" />
+                </svg>
+            </span>
+
+            <div>
+                LibraryLink NT
+                <small>YOUR NEXT CHAPTER STARTS HERE</small>
+            </div>
+        </div>
+
+        <form method="post"
+              action="@Url.Action("EndSession", "Kiosk")"
+              id="end-session">
+
+            @Html.AntiForgeryToken()
+
+            <button type="submit" class="finish-button">
+                Finish session
+                <span aria-hidden="true">↗</span>
+            </button>
+        </form>
+    </header>
+
+    <main id="main-content" tabindex="-1">
+        <a href="@Url.Action("Account", "Kiosk")"
+           class="back">
+            ← Back to my account
+        </a>
+
+        <div class="workspace">
+            <section class="guide"
+                     aria-labelledby="borrow-heading">
+
+                <div class="eyebrow">
+                    Take something wonderful home
+                </div>
+
+                <h1 id="borrow-heading">
+                    A new find.<br />
+                    <em>All yours to borrow.</em>
+                </h1>
+
+                <p class="guide-copy">
+                    Have your item ready. We’ll guide you through
+                    the rest, one simple step at a time.
+                </p>
+
+                <ol class="steps" aria-label="Borrowing steps">
+                    <li aria-current="@(Model.ReadyToConfirm ? null : "step")">
+                        <span class="step-number" aria-hidden="true">
+                            1
+                        </span>
+
+                        <div>
+                            <span class="step-title">
+                                Scan your item
+                            </span>
+
+                            <span class="step-note">
+                                Use the library barcode or enter its code.
+                            </span>
+                        </div>
+                    </li>
+
+                    <li aria-current="@(Model.ReadyToConfirm ? "step" : null)">
+                        <span class="step-number" aria-hidden="true">
+                            2
+                        </span>
+
+                        <div>
+                            <span class="step-title">
+                                Review and confirm
+                            </span>
+
+                            <span class="step-note">
+                                Check the item and return date.
+                            </span>
+                        </div>
+                    </li>
+
+                    <li>
+                        <span class="step-number" aria-hidden="true">
+                            3
+                        </span>
+
+                        <div>
+                            <span class="step-title">
+                                Enjoy your discovery
+                            </span>
+
+                            <span class="step-note">
+                                Your account will show the completed loan.
+                            </span>
+                        </div>
+                    </li>
+                </ol>
+            </section>
+
+            <section class="entry"
+                     aria-labelledby="entry-heading">
+
+                @if (TempData["KioskMessage"] is string message)
+                {
+                    <div class="notice" role="status">
+                        @message
+                    </div>
+                }
+
+                <div class="scan-symbol" aria-hidden="true">
+                    <svg viewBox="0 0 40 40"
+                         fill="none"
+                         stroke="currentColor"
+                         stroke-width="2"
+                         focusable="false">
+                        <path d="M12 5H5v7M28 5h7v7M5 28v7h7M35 28v7h-7" />
+                        <path d="M12 13v14M17 13v14M23 13v14M28 13v14" />
+                        <path d="M3 20h34" stroke-width="1.4" />
+                    </svg>
+                </div>
+
+                @Html.ValidationSummary(
+                    true,
+                    "",
+                    new { role = "alert" })
+
+                @if (Model.ReadyToConfirm)
+                {
+                    <h2 id="entry-heading">
+                        Looks like a good find.
+                    </h2>
+
+                    <p class="muted">
+                        Check these details, then confirm your loan.
+                    </p>
+
+                    <div class="item-summary">
+                        <dl>
+                            <dt>Library item</dt>
+                            <dd>@Model.ItemName</dd>
+
+                            <dt>Item library code</dt>
+                            <dd>@Model.LibraryCode</dd>
+
+                            <dt>Return by</dt>
+                            <dd class="due-date">
+                                @(Model.DueDate?.ToString("dd MMM yyyy"))
+                            </dd>
+                        </dl>
+                    </div>
+
+                    <form method="post"
+                          action="@Url.Action("Confirm", "Kiosk")"
+                          id="confirm-loan">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="confirmationToken"
+                               value="@Model.ConfirmationToken" />
+
+                        <button type="submit" class="primary">
+                            Confirm borrowing
+                            <span aria-hidden="true">→</span>
+                        </button>
+                    </form>
+
+                    <a href="@Url.Action("Borrow", "Kiosk")"
+                       class="button secondary primary">
+                        Choose a different item
+                    </a>
+                }
+                else
+                {
+                    <h2 id="entry-heading">
+                        What caught your eye?
+                    </h2>
+
+                    <p class="muted">
+                        Scan or enter the library code on your book,
+                        music or toy.
+                    </p>
+
+                    <form method="post"
+                          action="@Url.Action("Review", "Kiosk")">
+
+                        @Html.AntiForgeryToken()
+
+                        <label for="LibraryCode">
+                            Item library code
+                        </label>
+
+                        <input type="text"
+                               id="LibraryCode"
+                               name="LibraryCode"
+                               value="@Model.LibraryCode"
+                               placeholder="Enter the item’s library code"
+                               maxlength="20"
+                               required
+                               autocomplete="off"
+                               autocapitalize="characters"
+                               spellcheck="false"
+                               aria-describedby="item-help item-error" />
+
+                        <div id="item-error" class="error">
+                            @Html.ValidationMessageFor(m => m.LibraryCode)
+                        </div>
+
+                        <p id="item-help" class="help">
+                            Select the field before using a USB scanner.
+                            Use the library’s item label rather than its ISBN.
+                        </p>
+
+                        <button type="submit" class="primary">
+                            Review this item
+                            <span aria-hidden="true">→</span>
+                        </button>
+                    </form>
+                }
+
+                <aside class="support" aria-label="Help">
+                    <strong>
+                        A little help goes a long way.
+                    </strong>
+
+                    <p class="help">
+                        Ask the service desk if an item cannot be borrowed.
+                    </p>
+                </aside>
+            </section>
+        </div>
+
+        <noscript>
+            <p>
+                Automatic screen clearing requires JavaScript.
+                Use “Finish session” before leaving.
+            </p>
+        </noscript>
+    </main>
+
+    <dialog id="timeout-dialog"
+            aria-labelledby="timeout-heading"
+            aria-describedby="timeout-description">
+
+        <h2 id="timeout-heading">
+            Still exploring?
+        </h2>
+
+        <p id="timeout-description">
+            Your session will finish in
+            <strong id="seconds-left">30</strong> seconds.
+            Continuing returns you to item entry.
+        </p>
+
+        <button type="button" id="continue-session">
+            Continue my session
+        </button>
+
+        <button type="button"
+                id="finish-now"
+                class="secondary">
+            Finish now
+        </button>
+    </dialog>
+
+    <footer>
+        <span>
+            LibraryLink NT · Group 11 demonstration
+        </span>
+
+        <span>
+            Your visit. Your discoveries. Your library.
+        </span>
+    </footer>
+
+    <script>
+        (() => {
+            const endForm = document.getElementById("end-session");
+            const dialog = document.getElementById("timeout-dialog");
+            const continueButton =
+                document.getElementById("continue-session");
+            const seconds = document.getElementById("seconds-left");
+            const borrowUrl = '@Url.Action("Borrow", "Kiosk")';
+
+            let lastActivity = Date.now();
+            let ending = false;
+            let submitting = false;
+
+            function finish() {
+                if (ending || submitting) return;
+
+                ending = true;
+                document.body.style.visibility = "hidden";
+                endForm.requestSubmit();
+            }
+
+            function activity() {
+                if (!dialog.open && !ending) {
+                    lastActivity = Date.now();
+                }
+            }
+
+            ["pointerdown", "keydown", "touchstart"].forEach(event => {
+                document.addEventListener(event, activity, {
+                    passive: true
+                });
+            });
+
+            continueButton.addEventListener("click", () => {
+                window.location.replace(borrowUrl);
+            });
+
+            document.getElementById("finish-now")
+                .addEventListener("click", finish);
+
+            dialog.addEventListener("cancel", event => {
+                event.preventDefault();
+            });
+
+            function checkTimeout() {
+                if (ending || submitting) return;
+
+                const elapsed = Date.now() - lastActivity;
+
+                if (elapsed >= 90000) {
+                    finish();
+                    return;
+                }
+
+                if (elapsed >= 60000) {
+                    seconds.textContent =
+                        Math.ceil((90000 - elapsed) / 1000);
+
+                    if (!dialog.open) {
+                        dialog.showModal();
+                        continueButton.focus();
+                    }
+                }
+            }
+
+            setInterval(checkTimeout, 1000);
+
+            document.addEventListener(
+                "visibilitychange",
+                checkTimeout
+            );
+
+            window.addEventListener("pageshow", event => {
+                if (event.persisted) {
+                    window.location.replace(borrowUrl);
+                }
+            });
+
+            const confirmation =
+                document.getElementById("confirm-loan");
+
+            if (confirmation) {
+                confirmation.addEventListener("submit", event => {
+                    if (submitting) {
+                        event.preventDefault();
+                        return;
+                    }
+
+                    submitting = true;
+
+                    const button =
+                        confirmation.querySelector("button");
+
+                    button.disabled = true;
+                    button.textContent = "Processing…";
+                });
+            }
+        })();
+    </script>
+
+    <script src="@Url.Content("~/js/kiosk-accessibility.js")"
+            asp-append-version="true"></script>
+</body>
+</html>

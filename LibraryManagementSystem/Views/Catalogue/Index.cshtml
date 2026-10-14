@@ -2,217 +2,701 @@
 @model LibraryManagementSystem.ViewModels.CatalogueSearchViewModel
 
 @{
-    ViewData["Title"] = "Search Library";
+    ViewData["Title"] = "Explore the collection";
 }
 
-<div class="text-center mb-4">
-    <h1>Search Our Library</h1>
+<style>
+    .catalogue-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 24px;
+        margin-bottom: 30px;
+    }
 
-    <p class="text-muted">
-        Find books, music and toys from any phone, tablet or computer.
-    </p>
-</div>
+    .catalogue-eyebrow {
+        margin-bottom: 10px;
+        color: #705016;
+        font-size: .75rem;
+        font-weight: 750;
+        letter-spacing: .15em;
+        text-transform: uppercase;
+    }
 
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <form asp-controller="Catalogue"
-              asp-action="Index"
-              method="get"
-              class="row g-3 align-items-end">
+    .catalogue-heading h1 {
+        margin-bottom: 14px;
+        letter-spacing: -.055em;
+    }
 
-            <div class="col-12 col-lg-5">
-                <label for="searchTerm"
-                       class="form-label">
-                    Search
-                </label>
+    .catalogue-heading h1 span {
+        color: #705016;
+        font-family: Georgia, serif;
+        font-style: italic;
+        font-weight: 400;
+    }
 
-                <input id="searchTerm"
-                       name="searchTerm"
-                       value="@Model.SearchTerm"
-                       type="search"
-                       class="form-control"
-                       placeholder="Search by name, code or description" />
-            </div>
+    .catalogue-heading p {
+        max-width: 560px;
+        margin: 0;
+        color: #65635e;
+    }
 
-            <div class="col-12 col-sm-6 col-lg-2">
-                <label for="itemType"
-                       class="form-label">
-                    Item Type
-                </label>
+    .catalogue-search {
+        margin-bottom: 36px;
+        padding: clamp(22px, 3vw, 32px);
+        border: 1px solid #e5e0d6;
+        border-radius: 22px;
+        background: #fff;
+        box-shadow: 0 12px 35px rgba(32, 33, 31, .05);
+    }
 
-                <select id="itemType"
-                        name="itemType"
-                        class="form-select">
+    .catalogue-search-title {
+        margin-bottom: 20px;
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
 
-                    <option value="">All types</option>
+    .catalogue-search .form-label {
+        font-size: .85rem;
+    }
 
-                    <option value="Book"
-                            selected="@(Model.SelectedItemType == "Book")">
-                        Books
-                    </option>
+    .catalogue-search .btn {
+        min-height: 50px;
+    }
 
-                    <option value="Music"
-                            selected="@(Model.SelectedItemType == "Music")">
-                        Music
-                    </option>
+    .catalogue-results-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 22px;
+    }
 
-                    <option value="Toy"
-                            selected="@(Model.SelectedItemType == "Toy")">
-                        Toys
-                    </option>
-                </select>
-            </div>
+    .catalogue-results-heading h2 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
 
-            <div class="col-12 col-sm-6 col-lg-2">
-                <label for="status"
-                       class="form-label">
-                    Status
-                </label>
+    .catalogue-count {
+        padding: 7px 14px;
+        border: 1px solid #dfd2b4;
+        border-radius: 100px;
+        background: #f8efd9;
+        color: #705016;
+        font-size: .85rem;
+        font-weight: 650;
+    }
 
-                <select id="status"
-                        name="status"
-                        class="form-select">
+    .catalogue-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 24px;
+    }
 
-                    <option value="">All statuses</option>
+    .catalogue-item {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid #e5e0d6;
+        border-radius: 20px;
+        background: #fff;
+        box-shadow: 0 8px 28px rgba(32, 33, 31, .04);
+        transition:
+            border-color 200ms ease,
+            box-shadow 200ms ease;
+    }
 
-                    <option value="Available"
-                            selected="@(Model.SelectedStatus == "Available")">
-                        Available
-                    </option>
+    .catalogue-item:hover {
+        border-color: #b99a5f;
+        box-shadow: 0 16px 38px rgba(32, 33, 31, .09);
+    }
 
-                    <option value="Borrowed"
-                            selected="@(Model.SelectedStatus == "Borrowed")">
-                        Borrowed
-                    </option>
+    .catalogue-item-art {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-height: 155px;
+        overflow: hidden;
+        background: #eee7d8;
+        color: #725932;
+    }
 
-                    <option value="Damaged"
-                            selected="@(Model.SelectedStatus == "Damaged")">
-                        Damaged
-                    </option>
+    .catalogue-item-art::before {
+        content: "";
+        position: absolute;
+        width: 115px;
+        height: 115px;
+        border: 1px solid currentColor;
+        border-radius: 50%;
+        opacity: .12;
+    }
 
-                    <option value="Reserved"
-                            selected="@(Model.SelectedStatus == "Reserved")">
-                        Reserved
-                    </option>
+    .catalogue-item-art svg {
+        position: relative;
+        width: 64px;
+        height: 64px;
+    }
 
-                    <option value="Destroyed"
-                            selected="@(Model.SelectedStatus == "Destroyed")">
-                        Destroyed
-                    </option>
-                </select>
-            </div>
+    .catalogue-art-music {
+        background: #e4e7de;
+        color: #4d5c46;
+    }
 
-            <div class="col-12 col-lg-3">
-                <div class="d-flex gap-2">
-                    <button type="submit"
-                            class="btn btn-primary flex-grow-1">
-                        Search
-                    </button>
+    .catalogue-art-toy {
+        background: #f0e2d9;
+        color: #8b5941;
+    }
 
-                    <a asp-controller="Catalogue"
-                       asp-action="Index"
-                       class="btn btn-outline-secondary">
-                        Clear
-                    </a>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
+    .catalogue-type {
+        position: absolute;
+        top: 15px;
+        left: 16px;
+        padding: 4px 10px;
+        border: 1px solid rgba(32, 33, 31, .12);
+        border-radius: 7px;
+        background: rgba(255, 255, 255, .75);
+        color: #454138;
+        font-size: .7rem;
+        font-weight: 700;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+    }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="h4 mb-0">Library Items</h2>
+    .catalogue-item-body {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        padding: 24px;
+    }
 
-    <span class="badge bg-primary">
-        @Model.Items.Count result(s)
-    </span>
-</div>
+    .catalogue-status {
+        align-self: flex-start;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 15px;
+        padding: 5px 10px;
+        border: 1px solid #dedbd3;
+        border-radius: 100px;
+        background: #f1efea;
+        color: #5b5850;
+        font-size: .72rem;
+        font-weight: 700;
+    }
 
-@if (Model.Items.Count == 0)
-{
-    <div class="card shadow-sm">
-        <div class="card-body text-center py-5">
-            <h3 class="h5">No items found</h3>
+    .catalogue-status::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+    }
 
-            <p class="text-muted mb-0">
-                Try changing or clearing the search filters.
-            </p>
+    .catalogue-status-available {
+        border-color: #c6dfcd;
+        background: #edf6ef;
+        color: #285d37;
+    }
+
+    .catalogue-status-borrowed {
+        border-color: #e3d2ac;
+        background: #fbf2df;
+        color: #795714;
+    }
+
+    .catalogue-status-damaged,
+    .catalogue-status-destroyed {
+        border-color: #ebc7c9;
+        background: #fff0f1;
+        color: #922f38;
+    }
+
+    .catalogue-status-reserved {
+        border-color: #d5cce4;
+        background: #f1edf8;
+        color: #665084;
+    }
+
+    .catalogue-item h3 {
+        margin: 0 0 10px;
+        font-size: 1.3rem;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+    }
+
+    .catalogue-code {
+        margin-bottom: 18px;
+        color: #65635e;
+        font-size: .8rem;
+        overflow-wrap: anywhere;
+    }
+
+    .catalogue-code strong {
+        color: #454138;
+        font-family: Consolas, monospace;
+        font-weight: 600;
+    }
+
+    .catalogue-description {
+        flex: 1;
+        margin-bottom: 20px;
+        color: #65635e;
+        font-size: .9rem;
+        line-height: 1.8;
+        white-space: pre-line;
+        overflow-wrap: anywhere;
+    }
+
+    .catalogue-details {
+        padding-top: 16px;
+        border-top: 1px solid #ece8df;
+        color: #454138;
+        font-size: .85rem;
+        overflow-wrap: anywhere;
+    }
+
+    .catalogue-details-secondary {
+        margin-top: 5px;
+        color: #65635e;
+        font-size: .8rem;
+    }
+
+    .catalogue-item-footer {
+        padding: 16px 24px;
+        border-top: 1px solid #ece8df;
+        background: #faf8f3;
+        color: #65635e;
+        font-size: .8rem;
+        line-height: 1.6;
+    }
+
+    .catalogue-item-footer a {
+        font-weight: 650;
+    }
+
+    .catalogue-empty {
+        padding: 60px 24px;
+        border: 1px dashed #cfc4ad;
+        border-radius: 22px;
+        background: #fffdf8;
+        text-align: center;
+    }
+
+    .catalogue-empty-symbol {
+        display: grid;
+        place-items: center;
+        width: 66px;
+        height: 66px;
+        margin: 0 auto 22px;
+        border-radius: 50%;
+        background: #f3ead6;
+        color: #705016;
+    }
+
+    .catalogue-empty-symbol svg {
+        width: 28px;
+        height: 28px;
+    }
+
+    .catalogue-empty h3 {
+        font-size: 1.5rem;
+    }
+
+    .catalogue-empty p {
+        max-width: 390px;
+        margin: 12px auto 24px;
+        color: #65635e;
+    }
+
+    .catalogue-note {
+        margin: 28px 0 0;
+        color: #65635e;
+        font-size: .85rem;
+        text-align: center;
+    }
+
+    @@media (max-width: 991.98px) {
+        .catalogue-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 575.98px) {
+        .catalogue-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .catalogue-item-art {
+            min-height: 140px;
+        }
+
+        .catalogue-heading {
+            gap: 18px;
+        }
+
+        .catalogue-heading > .btn {
+            width: 100%;
+        }
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .catalogue-item {
+            transition: none;
+        }
+    }
+</style>
+
+<div class="catalogue-heading">
+    <div>
+        <div class="catalogue-eyebrow">
+            Your next discovery
         </div>
+
+        <h1>
+            Explore the <span>collection.</span>
+        </h1>
+
+        <p>
+            Books to get lost in, music to discover,
+            and toys that bring ideas to life.
+            Find something worth taking home.
+        </p>
     </div>
-}
-else
-{
-    <div class="row g-4">
-        @foreach (var item in Model.Items)
-        {
-            string statusColour = item.Status switch
+
+    <a class="btn btn-outline-primary"
+       asp-controller="Kiosk"
+       asp-action="Index">
+        Open self-service kiosk
+        <span aria-hidden="true"> →</span>
+    </a>
+</div>
+
+<section class="catalogue-search"
+         aria-labelledby="search-heading">
+
+    <h2 class="catalogue-search-title" id="search-heading">
+        What will you discover today?
+    </h2>
+
+    <form asp-controller="Catalogue"
+          asp-action="Index"
+          method="get"
+          role="search"
+          aria-label="Search the library collection"
+          class="row g-3 align-items-end">
+
+        <div class="col-12 col-lg-5">
+            <label class="form-label" for="searchTerm">
+                Search the collection
+            </label>
+
+            <input class="form-control"
+                   id="searchTerm"
+                   name="searchTerm"
+                   type="search"
+                   value="@Model.SearchTerm"
+                   placeholder="Name, library code or description" />
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label class="form-label" for="itemType">
+                Collection
+            </label>
+
+            <select class="form-select"
+                    id="itemType"
+                    name="itemType">
+
+                <option value="">All collections</option>
+
+                <option value="Book"
+                        selected="@(Model.SelectedItemType == "Book")">
+                    Books
+                </option>
+
+                <option value="Music"
+                        selected="@(Model.SelectedItemType == "Music")">
+                    Music
+                </option>
+
+                <option value="Toy"
+                        selected="@(Model.SelectedItemType == "Toy")">
+                    Toys
+                </option>
+            </select>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label class="form-label" for="status">
+                Availability
+            </label>
+
+            <select class="form-select"
+                    id="status"
+                    name="status">
+
+                <option value="">All statuses</option>
+
+                <option value="Available"
+                        selected="@(Model.SelectedStatus == "Available")">
+                    Available
+                </option>
+
+                <option value="Borrowed"
+                        selected="@(Model.SelectedStatus == "Borrowed")">
+                    Borrowed
+                </option>
+
+                <option value="Reserved"
+                        selected="@(Model.SelectedStatus == "Reserved")">
+                    Reserved
+                </option>
+
+                <option value="Damaged"
+                        selected="@(Model.SelectedStatus == "Damaged")">
+                    Damaged
+                </option>
+
+                <option value="Destroyed"
+                        selected="@(Model.SelectedStatus == "Destroyed")">
+                    Destroyed
+                </option>
+            </select>
+        </div>
+
+        <div class="col-12 col-lg-3">
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary flex-grow-1"
+                        type="submit">
+                    Search
+                </button>
+
+                <a class="btn btn-outline-secondary"
+                   asp-controller="Catalogue"
+                   asp-action="Index">
+                    Clear
+                </a>
+            </div>
+        </div>
+    </form>
+</section>
+
+<section aria-labelledby="results-heading">
+    <div class="catalogue-results-heading">
+        <h2 id="results-heading">
+            Discover your next favourite
+        </h2>
+
+        <span class="catalogue-count">
+            @Model.Items.Count
+            @(Model.Items.Count == 1 ? "item found" : "items found")
+        </span>
+    </div>
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="catalogue-empty">
+            <div class="catalogue-empty-symbol" aria-hidden="true">
+                <svg viewBox="0 0 32 32"
+                     fill="none"
+                     focusable="false">
+                    <circle cx="14" cy="14" r="9"
+                            stroke="currentColor"
+                            stroke-width="2" />
+
+                    <path d="M21 21L28 28"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round" />
+                </svg>
+            </div>
+
+            <h3>No matches this time</h3>
+
+            <p>
+                Try a different name or library code,
+                or clear your filters to explore the collection.
+            </p>
+
+            <a class="btn btn-primary"
+               asp-controller="Catalogue"
+               asp-action="Index">
+                Clear search filters
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="catalogue-grid">
+            @foreach (var item in Model.Items)
             {
-                ItemStatus.Available => "bg-success",
-                ItemStatus.Borrowed => "bg-primary",
-                ItemStatus.Damaged => "bg-warning text-dark",
-                ItemStatus.Destroyed => "bg-danger",
-                ItemStatus.Reserved => "bg-info text-dark",
-                _ => "bg-secondary"
-            };
+                var artClass = item.ItemType switch
+                {
+                    "Music" => "catalogue-art-music",
+                    "Toy" => "catalogue-art-toy",
+                    _ => ""
+                };
 
-            <div class="col-12 col-md-6 col-xl-4">
-                <article class="card shadow-sm h-100">
-                    <div class="card-body d-flex flex-column">
-                        <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
-                            <span class="badge bg-dark">
-                                @item.ItemType
-                            </span>
+                var statusClass = item.Status switch
+                {
+                    ItemStatus.Available => "catalogue-status-available",
+                    ItemStatus.Borrowed => "catalogue-status-borrowed",
+                    ItemStatus.Reserved => "catalogue-status-reserved",
+                    ItemStatus.Damaged => "catalogue-status-damaged",
+                    ItemStatus.Destroyed => "catalogue-status-destroyed",
+                    _ => ""
+                };
 
-                            <span class="badge @statusColour">
-                                @item.Status
-                            </span>
-                        </div>
+                <article class="catalogue-item">
+                    <div class="catalogue-item-art @artClass">
+                        <span class="catalogue-type">
+                            @item.ItemType
+                        </span>
 
-                        <h3 class="h4">@item.Name</h3>
+                        @if (item.ItemType == "Music")
+                        {
+                            <svg viewBox="0 0 64 64"
+                                 fill="none"
+                                 aria-hidden="true"
+                                 focusable="false">
+                                <circle cx="32" cy="32" r="25"
+                                        stroke="currentColor"
+                                        stroke-width="2.5" />
 
-                        <div class="text-muted small mb-3">
+                                <circle cx="32" cy="32" r="16"
+                                        stroke="currentColor"
+                                        stroke-width="1.5"
+                                        opacity=".5" />
+
+                                <circle cx="32" cy="32" r="6"
+                                        fill="currentColor" />
+
+                                <path d="M17 26C19 21 22 18 27 16"
+                                      stroke="currentColor"
+                                      stroke-width="2"
+                                      stroke-linecap="round" />
+                            </svg>
+                        }
+                        else if (item.ItemType == "Toy")
+                        {
+                            <svg viewBox="0 0 64 64"
+                                 fill="none"
+                                 aria-hidden="true"
+                                 focusable="false">
+                                <rect x="7" y="31"
+                                      width="25" height="25"
+                                      rx="4"
+                                      stroke="currentColor"
+                                      stroke-width="2.5" />
+
+                                <circle cx="40" cy="18" r="11"
+                                        stroke="currentColor"
+                                        stroke-width="2.5" />
+
+                                <path d="M43 33L57 56H29L43 33Z"
+                                      stroke="currentColor"
+                                      stroke-width="2.5"
+                                      stroke-linejoin="round" />
+                            </svg>
+                        }
+                        else
+                        {
+                            <svg viewBox="0 0 64 64"
+                                 fill="none"
+                                 aria-hidden="true"
+                                 focusable="false">
+                                <path d="M32 17C23 11 13 12 6 15V49C15 46 25 48 32 53C39 48 49 46 58 49V15C51 12 41 11 32 17ZM32 17V53"
+                                      stroke="currentColor"
+                                      stroke-width="2.5"
+                                      stroke-linejoin="round" />
+
+                                <path d="M14 24C19 23 24 25 26 26M14 32C19 31 24 33 26 34M38 26C42 24 46 23 50 24M38 34C42 32 46 31 50 32"
+                                      stroke="currentColor"
+                                      stroke-width="1.5"
+                                      stroke-linecap="round" />
+                            </svg>
+                        }
+                    </div>
+
+                    <div class="catalogue-item-body">
+                        <span class="catalogue-status @statusClass">
+                            @item.Status
+                        </span>
+
+                        <h3>@item.Name</h3>
+
+                        <div class="catalogue-code">
                             Library code:
                             <strong>@item.LibraryCode</strong>
                         </div>
 
-                        <p class="flex-grow-1">
-                            @item.Description
-                        </p>
+                        <p class="catalogue-description">@(
+                            string.IsNullOrWhiteSpace(item.Description)
+                                ? "No description has been added for this item."
+                                : item.Description
+                        )</p>
 
-                        @if (!string.IsNullOrWhiteSpace(item.PrimaryDetail))
+                        @if (!string.IsNullOrWhiteSpace(item.PrimaryDetail) ||
+                             !string.IsNullOrWhiteSpace(item.SecondaryDetail))
                         {
-                            <div class="border-top pt-3">
-                                <div>@item.PrimaryDetail</div>
+                            <div class="catalogue-details">
+                                @if (!string.IsNullOrWhiteSpace(item.PrimaryDetail))
+                                {
+                                    <div>@item.PrimaryDetail</div>
+                                }
 
-                                <div class="small text-muted mt-1">
-                                    @item.SecondaryDetail
-                                </div>
+                                @if (!string.IsNullOrWhiteSpace(item.SecondaryDetail))
+                                {
+                                    <div class="catalogue-details-secondary">
+                                        @item.SecondaryDetail
+                                    </div>
+                                }
                             </div>
                         }
                     </div>
 
-                    <div class="card-footer bg-white">
+                    <div class="catalogue-item-footer">
                         @if (item.Status == ItemStatus.Available)
                         {
-                            <span class="text-success fw-semibold">
-                                Available to borrow
+                            <span>
+                                Borrow using your card at the
+                                <a asp-controller="Kiosk"
+                                   asp-action="Index">
+                                    self-service kiosk
+                                </a>.
                             </span>
                         }
                         else if (item.Status == ItemStatus.Borrowed)
                         {
-                            <span class="text-primary fw-semibold">
-                                Currently on loan
+                            <span>
+                                Currently on loan. Ask the service desk
+                                about availability.
+                            </span>
+                        }
+                        else if (item.Status == ItemStatus.Reserved)
+                        {
+                            <span>
+                                Reserved. Please check with the service desk.
                             </span>
                         }
                         else
                         {
-                            <span class="text-danger fw-semibold">
-                                Currently unavailable
+                            <span>
+                                This item is currently unavailable to borrow.
                             </span>
                         }
                     </div>
                 </article>
-            </div>
-        }
-    </div>
-}
+            }
+        </div>
+    }
+</section>
+
+<p class="catalogue-note">
+    Availability can change. Your loan is confirmed when
+    borrowing completes successfully.
+</p>
