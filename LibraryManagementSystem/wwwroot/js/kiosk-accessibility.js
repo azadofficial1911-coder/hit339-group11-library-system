@@ -21,10 +21,11 @@
             preferences.largeText = saved?.largeText === true;
             preferences.highContrast = saved?.highContrast === true;
         } catch {
-            // Controls still work without browser storage.
+            // Controls remain usable when storage is unavailable.
         }
 
         const style = document.createElement("style");
+        style.id = "kiosk-accessibility-styles";
 
         style.textContent = `
             html.kiosk-large-text {
@@ -33,18 +34,19 @@
 
             #kiosk-accessibility {
                 display: flex;
+                align-items: center;
                 flex-wrap: wrap;
                 gap: 12px;
-                align-items: center;
                 padding: 16px clamp(20px, 5vw, 72px);
-                border-bottom: 1px solid #d4ddd6;
-                background: #fff;
-                color: #173536;
+                border-bottom: 1px solid #e5e0d6;
+                background: #fffdf8;
+                color: #34332e;
             }
 
             #kiosk-accessibility .accessibility-label {
-                font-weight: 750;
                 margin-right: 8px;
+                color: #65635e;
+                font-weight: 750;
             }
 
             #kiosk-accessibility button {
@@ -56,18 +58,23 @@
                 min-height: 48px;
                 margin: 0;
                 padding: 10px 16px;
-                border: 2px solid #075c56;
+                border: 2px solid #987027;
                 border-radius: 10px;
-                background: white;
-                color: #075c56;
+                background: #fffdf8;
+                color: #705016;
                 font: inherit;
                 font-weight: 700;
                 cursor: pointer;
             }
 
+            #kiosk-accessibility button:hover {
+                background: #f8efd9;
+            }
+
             #kiosk-accessibility button[aria-pressed="true"] {
-                background: #075c56;
-                color: white;
+                border-color: #20211f;
+                background: #20211f;
+                color: #e9bc62;
             }
 
             button,
@@ -75,26 +82,26 @@
                 transform-origin: center;
                 transition:
                     transform 160ms ease,
-                    box-shadow 160ms ease;
+                    box-shadow 160ms ease,
+                    background-color 160ms ease;
             }
 
-            /* Mouse hover: make buttons slightly larger. */
             @media (hover: hover) and (pointer: fine) {
                 button:not(:disabled):hover,
                 a.button:hover {
                     transform: scale(1.04);
-                    box-shadow: 0 8px 20px rgba(7, 63, 55, 0.18);
+                    box-shadow: 0 8px 20px rgba(32, 33, 31, .16);
                 }
 
                 button:not(:disabled):active,
                 a.button:active {
-                    transform: scale(1.01);
+                    transform: scale(.98);
                 }
 
                 input:not([type="hidden"]):hover,
                 select:hover,
                 textarea:hover {
-                    outline: 2px solid #ac4800;
+                    outline: 2px solid #916216;
                     outline-offset: 3px;
                 }
 
@@ -104,23 +111,38 @@
                 }
             }
 
-            /* Keep keyboard focus clearly visible. */
             button:focus-visible,
             a:focus-visible,
             input:focus-visible,
             select:focus-visible,
             textarea:focus-visible {
-                outline: 3px solid #ac4800;
+                outline: 3px solid #916216;
                 outline-offset: 5px;
             }
 
+            /*
+             * Apply a consistent dark surface to every kiosk panel.
+             * The welcome page uses entry-card and welcome-panel,
+             * while the account and borrowing pages use other classes.
+             */
             html.kiosk-high-contrast,
             html.kiosk-high-contrast body,
             html.kiosk-high-contrast header,
             html.kiosk-high-contrast footer,
             html.kiosk-high-contrast main,
+            html.kiosk-high-contrast .kiosk-header,
+            html.kiosk-high-contrast .kiosk-main,
+            html.kiosk-high-contrast .kiosk-footer,
+            html.kiosk-high-contrast .welcome-panel,
+            html.kiosk-high-contrast .entry-card,
+            html.kiosk-high-contrast .welcome,
             html.kiosk-high-contrast .card,
+            html.kiosk-high-contrast .workspace,
+            html.kiosk-high-contrast .guide,
+            html.kiosk-high-contrast .entry,
+            html.kiosk-high-contrast .item-summary,
             html.kiosk-high-contrast .notice,
+            html.kiosk-high-contrast .support,
             html.kiosk-high-contrast dialog,
             html.kiosk-high-contrast #kiosk-accessibility {
                 background: #000 !important;
@@ -129,17 +151,91 @@
                 box-shadow: none !important;
             }
 
+            /*
+             * Explicitly override page-specific text colours.
+             * This prevents white text on the previous white card,
+             * or dark labels remaining on a black background.
+             */
+            html.kiosk-high-contrast h1,
+            html.kiosk-high-contrast h2,
+            html.kiosk-high-contrast h3,
+            html.kiosk-high-contrast h4,
+            html.kiosk-high-contrast h5,
+            html.kiosk-high-contrast h6,
+            html.kiosk-high-contrast h1 span,
+            html.kiosk-high-contrast h1 em,
+            html.kiosk-high-contrast p,
+            html.kiosk-high-contrast label,
+            html.kiosk-high-contrast dt,
+            html.kiosk-high-contrast dd,
+            html.kiosk-high-contrast time,
             html.kiosk-high-contrast .muted,
             html.kiosk-high-contrast .help,
             html.kiosk-high-contrast .intro,
             html.kiosk-high-contrast .eyebrow,
-            html.kiosk-high-contrast .brand span,
-            html.kiosk-high-contrast dt,
-            html.kiosk-high-contrast .badge,
+            html.kiosk-high-contrast .brand,
+            html.kiosk-high-contrast .brand-name,
+            html.kiosk-high-contrast .brand-name span,
+            html.kiosk-high-contrast .brand small,
+            html.kiosk-high-contrast .welcome-copy,
+            html.kiosk-high-contrast .guide-copy,
+            html.kiosk-high-contrast .step-copy,
+            html.kiosk-high-contrast .step-copy strong,
+            html.kiosk-high-contrast .step-title,
+            html.kiosk-high-contrast .step-note,
+            html.kiosk-high-contrast .metric-label,
+            html.kiosk-high-contrast .metric-note,
+            html.kiosk-high-contrast .value,
+            html.kiosk-high-contrast .due-label,
+            html.kiosk-high-contrast .due-date,
+            html.kiosk-high-contrast .item-code,
+            html.kiosk-high-contrast .support strong,
+            html.kiosk-high-contrast .privacy-note,
+            html.kiosk-high-contrast .notice,
             html.kiosk-high-contrast
-            #kiosk-accessibility .accessibility-label {
+                #kiosk-accessibility .accessibility-label {
                 color: #fff !important;
+            }
+
+            html.kiosk-high-contrast .entry-card,
+            html.kiosk-high-contrast .welcome-panel,
+            html.kiosk-high-contrast .welcome,
+            html.kiosk-high-contrast .workspace,
+            html.kiosk-high-contrast .card,
+            html.kiosk-high-contrast .item-summary,
+            html.kiosk-high-contrast .notice,
+            html.kiosk-high-contrast dialog {
+                border: 2px solid #fff !important;
+            }
+
+            html.kiosk-high-contrast .steps,
+            html.kiosk-high-contrast .support {
                 border-color: #fff !important;
+            }
+
+            html.kiosk-high-contrast .brand-mark,
+            html.kiosk-high-contrast .brand-icon,
+            html.kiosk-high-contrast .card-icon,
+            html.kiosk-high-contrast .scan-symbol,
+            html.kiosk-high-contrast .metric-icon,
+            html.kiosk-high-contrast .item-mark,
+            html.kiosk-high-contrast .help-icon,
+            html.kiosk-high-contrast .step-number,
+            html.kiosk-high-contrast .number,
+            html.kiosk-high-contrast .status,
+            html.kiosk-high-contrast .badge,
+            html.kiosk-high-contrast .kiosk-badge {
+                border: 2px solid #fff !important;
+                background: #000 !important;
+                color: #fff !important;
+                box-shadow: none !important;
+            }
+
+            html.kiosk-high-contrast
+                .steps [aria-current="step"] .step-number {
+                border-color: #ffff00 !important;
+                background: #ffff00 !important;
+                color: #000 !important;
             }
 
             html.kiosk-high-contrast a {
@@ -148,24 +244,45 @@
 
             html.kiosk-high-contrast button,
             html.kiosk-high-contrast .button,
+            html.kiosk-high-contrast .start-button,
             html.kiosk-high-contrast #kiosk-accessibility button {
+                border: 2px solid #ffff00 !important;
                 background: #ffff00 !important;
                 color: #000 !important;
-                border: 2px solid #ffff00 !important;
+                box-shadow: none !important;
+            }
+
+            html.kiosk-high-contrast button span,
+            html.kiosk-high-contrast .button span {
+                color: inherit !important;
             }
 
             html.kiosk-high-contrast
-            #kiosk-accessibility button[aria-pressed="true"] {
+                #kiosk-accessibility button[aria-pressed="true"] {
+                border-color: #ffff00 !important;
                 background: #000 !important;
                 color: #ffff00 !important;
+            }
+
+            html.kiosk-high-contrast .skip-link {
+                border: 2px solid #ffff00 !important;
+                background: #ffff00 !important;
+                color: #000 !important;
             }
 
             html.kiosk-high-contrast input:not([type="hidden"]),
             html.kiosk-high-contrast select,
             html.kiosk-high-contrast textarea {
+                border: 2px solid #fff !important;
                 background: #000 !important;
                 color: #fff !important;
-                border: 2px solid #fff !important;
+                caret-color: #ffff00 !important;
+                box-shadow: none !important;
+            }
+
+            html.kiosk-high-contrast select option {
+                background: #000 !important;
+                color: #fff !important;
             }
 
             html.kiosk-high-contrast input::placeholder,
@@ -174,16 +291,20 @@
                 opacity: 1;
             }
 
-            html.kiosk-high-contrast .status,
-            html.kiosk-high-contrast .number {
-                background: #000 !important;
-                color: #fff !important;
-                border: 2px solid #fff !important;
+            html.kiosk-high-contrast .error,
+            html.kiosk-high-contrast .field-validation-error,
+            html.kiosk-high-contrast .validation-summary-errors,
+            html.kiosk-high-contrast .validation-summary-errors li {
+                color: #ffb4ab !important;
             }
 
-            html.kiosk-high-contrast .error,
-            html.kiosk-high-contrast .field-validation-error {
-                color: #ffb4ab !important;
+            html.kiosk-high-contrast .validation-summary-errors {
+                border-color: #ffb4ab !important;
+                background: #000 !important;
+            }
+
+            html.kiosk-high-contrast dialog::backdrop {
+                background: rgba(0, 0, 0, .85);
             }
 
             html.kiosk-high-contrast :focus-visible {
@@ -200,7 +321,7 @@
                 }
 
                 html.kiosk-high-contrast
-                input:not([type="hidden"]):hover,
+                    input:not([type="hidden"]):hover,
                 html.kiosk-high-contrast select:hover,
                 html.kiosk-high-contrast textarea:hover {
                     outline-color: #00ffff !important;
@@ -219,7 +340,16 @@
                 border: 0;
             }
 
-            /* Respect the user's reduced-motion preference. */
+            @media (max-width: 420px) {
+                #kiosk-accessibility {
+                    gap: 10px;
+                }
+
+                #kiosk-accessibility .accessibility-label {
+                    width: 100%;
+                }
+            }
+
             @media (prefers-reduced-motion: reduce) {
                 html {
                     scroll-behavior: auto !important;
@@ -228,6 +358,13 @@
                 button,
                 a.button {
                     transition: none !important;
+                    transform: none !important;
+                }
+
+                button:hover,
+                button:active,
+                a.button:hover,
+                a.button:active {
                     transform: none !important;
                 }
             }
@@ -302,7 +439,7 @@
                     JSON.stringify(preferences)
                 );
             } catch {
-                // Display changes remain available without storage.
+                // Changes still work without browser storage.
             }
 
             if (message) {
@@ -344,7 +481,7 @@
                 try {
                     sessionStorage.removeItem(storageKey);
                 } catch {
-                    // Sign-out must continue without storage.
+                    // Sign-out continues when storage is unavailable.
                 }
             });
         }
