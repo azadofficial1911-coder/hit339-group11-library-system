@@ -64,6 +64,11 @@ builder.Services.AddScoped<IReservationService, ReservationService>();
 // Checks for due-soon and overdue reminders while the app is running.
 builder.Services.AddHostedService<NotificationBackgroundService>();
 
+// Register the CSV import preview service.
+builder.Services.AddScoped<ICsvImportService, CsvImportService>();
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ReportService>();
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 var app = builder.Build();
 
 // Create the roles and demonstration accounts.
