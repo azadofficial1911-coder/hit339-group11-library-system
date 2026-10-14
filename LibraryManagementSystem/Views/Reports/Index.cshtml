@@ -6,6 +6,26 @@
     var moneyCulture = CultureInfo.GetCultureInfo("en-AU");
 }
 
+<style>
+    .report-loans {
+        width: 100%;
+        table-layout: auto;
+    }
+
+        .report-loans th,
+        .report-loans td {
+            white-space: nowrap;
+            word-break: normal;
+            overflow-wrap: normal;
+        }
+
+            .report-loans th:nth-child(3),
+            .report-loans td:nth-child(3) {
+                min-width: 240px;
+                white-space: normal;
+            }
+</style>
+
 <h1>Library reports</h1>
 
 <p>
@@ -49,7 +69,7 @@
             </select>
         </div>
 
-        <div class="col-md-3 d-flex align-items-end gap-2">
+        <div class="col-md-3 d-flex align-items-end gap-2 flex-wrap">
             <button type="submit" class="btn btn-primary">
                 Apply filters
             </button>
@@ -192,7 +212,7 @@ else
     <h2 class="h4">Loan details</h2>
 
     <div class="table-responsive">
-        <table class="table table-bordered table-striped">
+        <table class="table table-bordered table-striped report-loans">
             <caption>Loans matching the selected filters.</caption>
             <thead>
                 <tr>
