@@ -1,0 +1,330 @@
+﻿@model LibraryManagementSystem.ViewModels.KioskStartViewModel
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Welcome | LibraryLink NT Kiosk</title>
+
+    <style>
+            :root {
+                font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+                color: #173536;
+                background: #f5f3ed;
+            }
+
+            * { box-sizing: border-box; }
+
+            body {
+                margin: 0;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+
+            a { color: #075c56; }
+
+            :focus-visible {
+                outline: 3px solid #9b4700;
+                outline-offset: 5px;
+            }
+
+            .skip-link {
+                position: absolute;
+                left: 16px;
+                top: -100px;
+                background: white;
+                padding: 16px;
+                z-index: 10;
+            }
+
+            .skip-link:focus { top: 16px; }
+
+            header {
+                padding: 24px clamp(20px, 5vw, 72px);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 16px;
+                border-bottom: 1px solid #d4ddd6;
+            }
+
+            .brand {
+                font-size: 1.35rem;
+                font-weight: 800;
+                letter-spacing: -.04em;
+            }
+
+            .brand span { color: #08766b; }
+
+            .badge {
+                border: 1px solid #b7cdc3;
+                border-radius: 100px;
+                padding: 10px 16px;
+                font-size: .9rem;
+                font-weight: 600;
+            }
+
+            main {
+                width: min(100%, 1180px);
+                margin: auto;
+                padding: 48px 24px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                align-items: center;
+                gap: 64px;
+            }
+
+            .eyebrow {
+                color: #075c56;
+                font-size: .85rem;
+                font-weight: 800;
+                letter-spacing: .14em;
+                text-transform: uppercase;
+            }
+
+            h1 {
+                font-size: clamp(2.5rem, 5vw, 4.5rem);
+                line-height: 1.08;
+                letter-spacing: -.055em;
+                margin: 18px 0 24px;
+            }
+
+            .intro {
+                font-size: 1.15rem;
+                line-height: 1.75;
+                color: #435b59;
+                max-width: 430px;
+            }
+
+            .steps {
+                padding: 0;
+                list-style: none;
+                display: grid;
+                gap: 18px;
+                margin-top: 32px;
+            }
+
+            .steps li {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                line-height: 1.5;
+            }
+
+            .number {
+                background: #dcebe3;
+                border-radius: 50%;
+                min-width: 36px;
+                height: 36px;
+                display: inline-grid;
+                place-items: center;
+                font-weight: 750;
+            }
+
+            .card {
+                background: #fff;
+                border: 1px solid #d4ddd6;
+                border-radius: 24px;
+                padding: clamp(24px, 4vw, 44px);
+                box-shadow: 0 16px 50px #1735360a;
+                min-width: 0;
+            }
+
+            h2 {
+                font-size: 1.75rem;
+                letter-spacing: -.03em;
+                margin: 0 0 12px;
+            }
+
+            .muted {
+                color: #435b59;
+                line-height: 1.65;
+            }
+
+            label {
+                display: block;
+                font-weight: 750;
+                margin: 28px 0 10px;
+            }
+
+            input {
+                width: 100%;
+                min-height: 64px;
+                padding: 16px;
+                border: 2px solid #718680;
+                border-radius: 12px;
+                font: inherit;
+                font-size: 1.2rem;
+                color: #173536;
+                background: #fff;
+            }
+
+            input.input-validation-error { border-color: #a12622; }
+
+            .help {
+                font-size: .9rem;
+                line-height: 1.6;
+                color: #435b59;
+            }
+
+            .error {
+                display: block;
+                color: #a12622;
+                font-weight: 650;
+                line-height: 1.6;
+                margin-top: 8px;
+            }
+
+            button {
+                width: 100%;
+                min-height: 64px;
+                padding: 16px 24px;
+                margin-top: 22px;
+                border: 0;
+                border-radius: 12px;
+                background: #075c56;
+                color: #fff;
+                font: inherit;
+                font-size: 1.1rem;
+                font-weight: 750;
+                cursor: pointer;
+            }
+
+            button:hover { background: #03433f; }
+
+            .notice {
+                background: #e6f2eb;
+                color: #173f31;
+                padding: 16px;
+                border-radius: 12px;
+                line-height: 1.6;
+                margin-bottom: 24px;
+                overflow-wrap: anywhere;
+            }
+
+            .support {
+                margin-top: 28px;
+                padding-top: 22px;
+                border-top: 1px solid #d4ddd6;
+            }
+
+            footer {
+                padding: 24px;
+                text-align: center;
+                color: #435b59;
+                font-size: .9rem;
+                line-height: 1.6;
+            }
+
+            @@media (max-width: 760px) {
+                main {
+                    grid-template-columns: 1fr;
+                    gap: 28px;
+                    padding-top: 32px;
+                }
+
+                .steps { display: none; }
+            }
+    </style>
+</head>
+
+<body>
+    <a class="skip-link" href="#card-entry">Skip to card entry</a>
+
+    <header>
+        <div class="brand">LibraryLink <span>NT</span></div>
+        <div class="badge">Self-service kiosk</div>
+    </header>
+
+    <main>
+        <section aria-labelledby="welcome-heading">
+            <div class="eyebrow">Your library, made simple</div>
+
+            <h1 id="welcome-heading">
+                A little discovery.<br />
+                A lot to explore.
+            </h1>
+
+            <p class="intro">
+                Start with your library card to view your borrowing
+                account. Enter your borrower code or use a connected
+                card scanner.
+            </p>
+
+            <ol class="steps">
+                <li>
+                    <span class="number" aria-hidden="true">1</span>
+                    Identify yourself with your library card.
+                </li>
+                <li>
+                    <span class="number" aria-hidden="true">2</span>
+                    Check your current loans and due dates.
+                </li>
+                <li>
+                    <span class="number" aria-hidden="true">3</span>
+                    Finish your session before you leave.
+                </li>
+            </ol>
+        </section>
+
+        <section class="card" id="card-entry"
+                 aria-labelledby="start-heading" tabindex="-1">
+
+            @if (TempData["KioskMessage"] is string message)
+            {
+                <div class="notice" role="status">@message</div>
+            }
+
+            <h2 id="start-heading">Welcome to your library</h2>
+            <p class="muted">
+                Have your library card ready. Let’s get started.
+            </p>
+
+            <form asp-controller="Kiosk" asp-action="Start" method="post">
+                <label asp-for="BorrowerCode"></label>
+
+                <input asp-for="BorrowerCode"
+                       autocomplete="off"
+                       autocapitalize="characters"
+                       spellcheck="false"
+                       maxlength="20"
+                       required
+                       aria-describedby="code-help code-error" />
+
+                <span asp-validation-for="BorrowerCode"
+                      id="code-error"
+                      class="error"></span>
+
+                <p class="help" id="code-help">
+                    Select this field, then scan your card with a
+                    connected USB barcode scanner or type the code
+                    printed on your card.
+                </p>
+
+                <button type="submit">Open my account →</button>
+            </form>
+
+            <div class="support">
+                <strong>Need a hand?</strong>
+                <p class="help">
+                    Ask the library service desk for help with your
+                    card or account.
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        LibraryLink NT · Group 11 demonstration<br />
+        Please finish your session before leaving this kiosk.
+    </footer>
+</body>
+</html>
