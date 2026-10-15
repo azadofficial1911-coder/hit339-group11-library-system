@@ -1,0 +1,261 @@
+﻿@model LibraryManagementSystem.ViewModels.ReportViewModel
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Library Reports";
+    var moneyCulture = CultureInfo.GetCultureInfo("en-AU");
+}
+
+<style>
+    .report-loans {
+        width: 100%;
+        table-layout: auto;
+    }
+
+        .report-loans th,
+        .report-loans td {
+            white-space: nowrap;
+            word-break: normal;
+            overflow-wrap: normal;
+        }
+
+            .report-loans th:nth-child(3),
+            .report-loans td:nth-child(3) {
+                min-width: 240px;
+                white-space: normal;
+            }
+</style>
+
+<h1>Library reports</h1>
+
+<p>
+    View current inventory and borrowing activity.
+    Date filters apply to the date a loan was borrowed.
+</p>
+
+<form asp-controller="Reports"
+      asp-action="Index"
+      method="get"
+      class="card card-body mb-4">
+
+    <div class="row g-3">
+        <div class="col-md-3">
+            <label asp-for="FromDate" class="form-label">
+                Borrowed from
+            </label>
+            <input asp-for="FromDate"
+                   type="date"
+                   class="form-control" />
+        </div>
+
+        <div class="col-md-3">
+            <label asp-for="ToDate" class="form-label">
+                Borrowed to
+            </label>
+            <input asp-for="ToDate"
+                   type="date"
+                   class="form-control" />
+        </div>
+
+        <div class="col-md-3">
+            <label asp-for="ItemType" class="form-label">
+                Item type
+            </label>
+            <select asp-for="ItemType" class="form-select">
+                <option value="">All types</option>
+                <option value="Book">Book</option>
+                <option value="Music">Music</option>
+                <option value="Toy">Toy</option>
+            </select>
+        </div>
+
+        <div class="col-md-3 d-flex align-items-end gap-2 flex-wrap">
+            <button type="submit" class="btn btn-primary">
+                Apply filters
+            </button>
+            <a asp-controller="Reports"
+               asp-action="Index"
+               class="btn btn-outline-secondary">
+                Reset
+            </a>
+        </div>
+    </div>
+</form>
+
+@if (Model.Errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <ul class="mb-0">
+            @foreach (var error in Model.Errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+else
+{
+    <div class="mb-3 d-flex gap-2 flex-wrap">
+        <a asp-controller="Reports"
+           asp-action="ExportCsv"
+           asp-route-fromDate="@(Model.FromDate?.ToString("yyyy-MM-dd"))"
+           asp-route-toDate="@(Model.ToDate?.ToString("yyyy-MM-dd"))"
+           asp-route-itemType="@Model.ItemType"
+           class="btn btn-outline-primary">
+            Download CSV
+        </a>
+
+        <a asp-controller="Reports"
+           asp-action="ExportPdf"
+           asp-route-fromDate="@(Model.FromDate?.ToString("yyyy-MM-dd"))"
+           asp-route-toDate="@(Model.ToDate?.ToString("yyyy-MM-dd"))"
+           asp-route-itemType="@Model.ItemType"
+           class="btn btn-outline-danger">
+            Download PDF
+        </a>
+    </div>
+
+    <p class="text-muted">
+        Generated: @Model.GeneratedAt.ToString("dd MMM yyyy HH:mm")
+    </p>
+
+    <h2 class="h4">Current inventory</h2>
+
+    <p>
+        Total: <strong>@Model.TotalItems</strong> |
+        Available: <strong>@Model.AvailableItems</strong> |
+        Borrowed: <strong>@Model.BorrowedItems</strong>
+    </p>
+
+    <div class="table-responsive mb-4">
+        <table class="table table-bordered table-striped">
+            <caption>
+                Current item counts by type and status.
+                Inventory is not restricted by the loan date filters.
+            </caption>
+            <thead>
+                <tr>
+                    <th scope="col">Item type</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Inventory.Count == 0)
+                {
+                    <tr>
+                        <td colspan="3">
+                            No inventory matches this item type.
+                        </td>
+                    </tr>
+                }
+
+                @foreach (var row in Model.Inventory)
+                {
+                    <tr>
+                        <td>@row.ItemType</td>
+                        <td>@row.Status</td>
+                        <td>@row.Count</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="h4">Loan summary</h2>
+
+    <p>
+        Total: <strong>@Model.TotalLoans</strong> |
+        Active: <strong>@Model.ActiveLoans</strong> |
+        Overdue: <strong>@Model.OverdueLoans</strong> |
+        Returned: <strong>@Model.ReturnedLoans</strong>
+    </p>
+
+    <p class="text-muted">
+        Active loans include overdue loans.
+        Status is evaluated when this report is generated.
+    </p>
+
+    <h2 class="h4">Recorded fines</h2>
+
+    <div class="table-responsive mb-4">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th scope="col">Assessed</th>
+                    <th scope="col">Marked paid</th>
+                    <th scope="col">Outstanding</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        @Model.AssessedFines.ToString("C", moneyCulture)
+                    </td>
+                    <td>
+                        @Model.PaidFines.ToString("C", moneyCulture)
+                    </td>
+                    <td>
+                        @Model.OutstandingFines.ToString("C", moneyCulture)
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p class="text-muted">
+        These totals use recorded fines for the selected loans.
+        They do not estimate unrecorded fines or show payments
+        received within a payment date range.
+    </p>
+
+    <h2 class="h4">Loan details</h2>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped report-loans">
+            <caption>Loans matching the selected filters.</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Loan ID</th>
+                    <th scope="col">Library code</th>
+                    <th scope="col">Item</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Borrowed</th>
+                    <th scope="col">Due</th>
+                    <th scope="col">Returned</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Fine</th>
+                    <th scope="col">Paid</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Loans.Count == 0)
+                {
+                    <tr>
+                        <td colspan="10">
+                            No loans match these filters.
+                        </td>
+                    </tr>
+                }
+
+                @foreach (var loan in Model.Loans)
+                {
+                    <tr>
+                        <td>@loan.LoanId</td>
+                        <td>@loan.LibraryCode</td>
+                        <td>@loan.ItemName</td>
+                        <td>@loan.ItemType</td>
+                        <td>@loan.BorrowDate.ToString("dd MMM yyyy")</td>
+                        <td>@loan.DueDate.ToString("dd MMM yyyy")</td>
+                        <td>
+                            @(loan.ReturnDate?.ToString("dd MMM yyyy") ?? "—")
+                        </td>
+                        <td>@loan.Status</td>
+                        <td>@loan.FineAmount.ToString("C", moneyCulture)</td>
+                        <td>@(loan.FinePaid ? "Yes" : "No")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

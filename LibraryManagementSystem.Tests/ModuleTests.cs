@@ -161,7 +161,7 @@ public class ModuleTests : IDisposable
     public async Task Admin_pages_render_and_missing_fields_do_not_crash()
     {
         using var client = await host.Login("admin");
-        foreach (var path in new[] { "/Branches", "/Branches/Create", "/ReceptionDesks", "/ReceptionDesks/Create", "/BranchInventory", "/Books", "/Musics", "/Toys", "/Catalogue" })
+        foreach (var path in new[] { "/Branches", "/Branches/Create", "/ReceptionDesks", "/ReceptionDesks/Create", "/BranchInventory", "/Books", "/Musics", "/Toys", "/Catalogue", "/Import", "/Reports" })
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(path)).StatusCode);
         var html = await client.GetStringAsync("/Branches/Create");
         var response = await client.PostAsync("/Branches/Create", new FormUrlEncodedContent(new Dictionary<string,string> {
@@ -318,5 +318,104 @@ public class ModuleTests : IDisposable
         Assert.Contains("Use Transfers", await response.Content.ReadAsStringAsync());
         using var scope = host.Scope(); var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         Assert.Equal(ItemStatus.InTransit, (await db.Items.FindAsync(item))!.Status); Assert.Empty(await db.Loans.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData(false)][InlineData(true)]
+    public async Task Kiosk_confirmation_respects_dispatch_between_review_and_confirm(bool dispatch)
+    {
+        var (item, _, b) = await Stock();
+        using (var scope = host.Scope()) {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>(); db.Borrowers.Add(Patron()); await db.SaveChangesAsync();
+        }
+        using var client = host.Client();
+        var html = await client.GetStringAsync("/Kiosk");
+        var start = await client.PostAsync("/Kiosk/Start", new FormUrlEncodedContent(new Dictionary<string,string> {
+            ["__RequestVerificationToken"] = TestHost.Token(html), ["BorrowerCode"] = "PATRON-TEST"
+        }));
+        Assert.Equal(HttpStatusCode.Redirect, start.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/Kiosk/Account")).StatusCode);
+        html = await client.GetStringAsync("/Kiosk/Borrow");
+        var review = await client.PostAsync("/Kiosk/Review", new FormUrlEncodedContent(new Dictionary<string,string> {
+            ["__RequestVerificationToken"] = TestHost.Token(html), ["LibraryCode"] = "COPY-1"
+        }));
+        Assert.Equal(HttpStatusCode.OK, review.StatusCode); html = await review.Content.ReadAsStringAsync();
+        var token = System.Text.RegularExpressions.Regex.Match(html, "name=\"confirmationToken\"\\s+value=\"([^\"]+)\"").Groups[1].Value;
+        Assert.NotEmpty(token);
+        if (dispatch) Assert.True((await Dispatch(item, b)).Success);
+        var confirm = await client.PostAsync("/Kiosk/Confirm", new FormUrlEncodedContent(new Dictionary<string,string> {
+            ["__RequestVerificationToken"] = TestHost.Token(html), ["confirmationToken"] = token
+        }));
+        Assert.Equal(HttpStatusCode.Redirect, confirm.StatusCode);
+        using var finalScope = host.Scope(); var finalDb = finalScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(dispatch ? 0 : 1, await finalDb.Loans.CountAsync());
+        Assert.Equal(dispatch ? ItemStatus.InTransit : ItemStatus.Borrowed, (await finalDb.Items.FindAsync(item))!.Status);
+    }
+    [Theory]
+    [InlineData("A", true)][InlineData("UNKNOWN", false)][InlineData("", true)]
+    public async Task Import_preview_validates_optional_branch_code(string branchCode, bool valid)
+    {
+        var (_, a, _) = await Stock();
+        using var scope = host.Scope();
+        var csv = "ItemType,Name,Description,LibraryCode,Author,Genre,PublicationYear,BranchCode\nBook,Imported copy,Imported description,IMPORT-1,Test Author,Test,2026," + branchCode + "\n";
+        using var input = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(csv));
+        var result = await scope.ServiceProvider.GetRequiredService<ICsvImportService>().PreviewAsync(input, "branch.csv");
+        Assert.Equal(valid, result.CanImport);
+        var row = Assert.Single(result.Rows);
+        if (valid) Assert.Equal(branchCode == "" ? null : a, ImportItemFactory.Create(row)!.BranchId);
+        else Assert.Contains(row.Errors, error => error.Contains("active branch"));
+    }
+    [Fact]
+    public async Task Import_confirmation_saves_branch_and_rejects_branch_deactivated_after_preview()
+    {
+        var (_, a, b) = await Stock();
+        using var client = await host.Login("admin");
+        async Task<string> Preview(string code, string branchCode) {
+            var html = await client.GetStringAsync("/Import");
+            using var form = new MultipartFormDataContent();
+            form.Add(new StringContent(TestHost.Token(html)), "__RequestVerificationToken");
+            form.Add(new StringContent("ItemType,Name,Description,LibraryCode,Author,Genre,PublicationYear,BranchCode\nBook,Imported copy,Imported description," + code + ",Test Author,Test,2026," + branchCode + "\n"), "file", "branch.csv");
+            var response = await client.PostAsync("/Import/Preview", form);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode); return await response.Content.ReadAsStringAsync();
+        }
+        async Task<HttpResponseMessage> Confirm(string html) {
+            var token = System.Text.RegularExpressions.Regex.Match(html, "name=\"previewToken\"\\s+value=\"([^\"]+)\"").Groups[1].Value;
+            Assert.NotEmpty(token);
+            return await client.PostAsync("/Import/Confirm", new FormUrlEncodedContent(new Dictionary<string,string> {
+                ["__RequestVerificationToken"] = TestHost.Token(html), ["previewToken"] = token
+            }));
+        }
+        var first = await Preview("IMPORT-1", "A");
+        Assert.Equal(HttpStatusCode.Redirect, (await Confirm(first)).StatusCode);
+        var second = await Preview("IMPORT-2", "B");
+        using (var scope = host.Scope()) {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            Assert.Equal(a, (await db.Items.SingleAsync(i => i.LibraryCode == "IMPORT-1")).BranchId);
+            (await db.Branches.FindAsync(b))!.IsActive = false; await db.SaveChangesAsync();
+        }
+        var rejected = await Confirm(second);
+        Assert.Equal(HttpStatusCode.OK, rejected.StatusCode);
+        Assert.Contains("active branch", await rejected.Content.ReadAsStringAsync());
+        using var finalScope = host.Scope();
+        Assert.False(await finalScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Items.AnyAsync(i => i.LibraryCode == "IMPORT-2"));
+    }
+
+    [Fact]
+    public async Task Reports_include_transit_in_inventory_and_export_successfully()
+    {
+        var (item, _, b) = await Stock(); await Dispatch(item, b);
+        using (var scope = host.Scope()) {
+            var report = await scope.ServiceProvider.GetRequiredService<ReportService>().GenerateAsync(null, null, null);
+            Assert.Equal(1, report.TotalItems); Assert.Equal(0, report.AvailableItems);
+            Assert.Contains(report.Inventory, row => row.Status == "InTransit" && row.Count == 1);
+        }
+        using var client = await host.Login("manager");
+        foreach (var (path, mime) in new[] { ("ExportCsv", "text/csv"), ("ExportPdf", "application/pdf") }) {
+            var response = await client.GetAsync("/Reports/" + path);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal(mime, response.Content.Headers.ContentType!.MediaType);
+            var bytes = await response.Content.ReadAsByteArrayAsync(); Assert.NotEmpty(bytes);
+            if (path == "ExportPdf") Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
+        }
     }
 }

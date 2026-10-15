@@ -1,0 +1,111 @@
+@model LibraryManagementSystem.ViewModels.ImportPreviewViewModel
+
+@{
+    ViewData["Title"] = "CSV Import";
+}
+
+<p>Optional BranchCode assigns new stock to an active branch. Omit or leave it blank for unassigned stock; Admin can assign it later from Branch stock and transfers.</p>
+<h1>Import library items</h1>
+
+<p>
+    Upload a CSV containing books, music or toys.
+    Review the rows before confirming the import.
+</p>
+
+@if (TempData["ImportSuccess"] is string success)
+{
+    <div class="alert alert-success" role="status">
+        @success
+    </div>
+}
+
+@if (Model.Errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>Please fix the following:</strong>
+        <ul class="mb-0">
+            @foreach (var error in Model.Errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form asp-controller="Import"
+              asp-action="Preview"
+              method="post"
+              enctype="multipart/form-data">
+
+            <div class="mb-3">
+                <label for="csvFile" class="form-label">
+                    CSV file
+                </label>
+
+                <input id="csvFile"
+                       name="file"
+                       type="file"
+                       accept=".csv"
+                       class="form-control"
+                       aria-describedby="fileHelp"
+                       required />
+
+                <div id="fileHelp" class="form-text">
+                    Maximum file size: 1 MB.
+                    Maximum number of items: 1,000.
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                Preview CSV
+            </button>
+        </form>
+    </div>
+</div>
+
+<h2 class="h4">CSV column guide</h2>
+
+<p>
+    Include the common columns and the additional columns
+    needed for each item type. Leave unrelated fields empty.
+</p>
+
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th scope="col">Item type</th>
+                <th scope="col">Columns</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <th scope="row">All items</th>
+                <td>ItemType, Name, Description, LibraryCode</td>
+            </tr>
+            <tr>
+                <th scope="row">Book</th>
+                <td>Author, Genre, Isbn, PublicationYear</td>
+            </tr>
+            <tr>
+                <th scope="row">Music</th>
+                <td>Artist, MusicGenre, ReleaseYear, Format</td>
+            </tr>
+            <tr>
+                <th scope="row">Toy</th>
+                <td>
+                    ToyType, RecommendedAge, Manufacturer,
+                    SafetyInformation
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<p class="text-muted">
+    Library codes must be unique.
+    Imported items start with Available status.
+    ISBN is optional for books.
+</p>

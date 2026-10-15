@@ -1,8 +1,802 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Discover your next chapter";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<style>
+    .home-page {
+        --home-dark: #20211f;
+        --home-gold: #e9bc62;
+        --home-muted: #65635e;
+    }
+
+    .home-hero {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: 1.15fr .85fr;
+        align-items: center;
+        gap: 32px;
+        min-height: 470px;
+        padding: clamp(28px, 5vw, 64px);
+        border: 1px solid #3c3d35;
+        border-radius: 28px;
+        background:
+            radial-gradient(
+                ellipse at 90% 20%,
+                rgba(233, 188, 98, .14),
+                transparent 55%
+            ),
+            #20211f;
+        color: #f5f2e9;
+    }
+
+    .home-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 22px;
+        color: #e9bc62;
+        font-size: .75rem;
+        font-weight: 700;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+    }
+
+    .home-eyebrow::before {
+        content: "";
+        width: 28px;
+        height: 1px;
+        background: currentColor;
+    }
+
+    .home-hero h1 {
+        margin: 0 0 24px;
+        color: #fffdf6;
+        font-size: clamp(2.6rem, 5.5vw, 5rem);
+        font-weight: 750;
+        line-height: 1.05;
+        letter-spacing: -.065em;
+    }
+
+    .home-hero h1 span {
+        color: #e9bc62;
+        font-family: Georgia, "Times New Roman", serif;
+        font-style: italic;
+        font-weight: 400;
+    }
+
+    .home-hero-description {
+        max-width: 440px;
+        margin-bottom: 28px;
+        color: #cbc9bf;
+        font-size: 1.05rem;
+        line-height: 1.8;
+    }
+
+    .home-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+    }
+
+    .home-actions .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        min-height: 54px;
+        padding: 14px 22px;
+    }
+
+    .home-secondary {
+        border: 1px solid #777568;
+        background: transparent;
+        color: #fffdf6;
+    }
+
+    .home-secondary:hover,
+    .home-secondary:focus-visible {
+        border-color: #e9bc62;
+        background: rgba(233, 188, 98, .1);
+        color: #f1cc86;
+    }
+
+    .home-hero-note {
+        margin: 24px 0 0;
+        color: #bbb9af;
+        font-size: .8rem;
+    }
+
+    /* Decorative book illustration */
+
+    .home-art {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-width: 0;
+        min-height: 330px;
+    }
+
+    .home-art-circle {
+        position: absolute;
+        width: 290px;
+        height: 290px;
+        border: 1px solid rgba(233, 188, 98, .2);
+        border-radius: 50%;
+        background: rgba(233, 188, 98, .035);
+    }
+
+    .home-art-circle::before {
+        content: "";
+        position: absolute;
+        inset: 24px;
+        border: 1px dashed rgba(233, 188, 98, .15);
+        border-radius: 50%;
+    }
+
+    .home-book-stack {
+        position: relative;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 10px;
+        width: 280px;
+        height: 250px;
+        padding-bottom: 28px;
+        border-bottom: 10px solid #77705a;
+        filter: drop-shadow(0 24px 24px rgba(0, 0, 0, .3));
+    }
+
+    .home-book {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        width: 65px;
+        padding: 22px 8px;
+        border: 1px solid rgba(255, 255, 255, .16);
+        border-radius: 5px 8px 3px 3px;
+        box-shadow: inset 5px 0 0 rgba(0, 0, 0, .12);
+    }
+
+    .home-book::before,
+    .home-book::after {
+        content: "";
+        width: 65%;
+        height: 3px;
+        border-top: 1px solid currentColor;
+        border-bottom: 1px solid currentColor;
+        opacity: .65;
+    }
+
+    .home-book span {
+        font-family: Georgia, serif;
+        font-size: .8rem;
+        letter-spacing: .12em;
+        writing-mode: vertical-rl;
+    }
+
+    .home-book-one {
+        height: 172px;
+        background: #677360;
+        color: #f5edda;
+        transform: rotate(-9deg) translateX(-5px);
+    }
+
+    .home-book-two {
+        height: 218px;
+        background: #e9bc62;
+        color: #443513;
+    }
+
+    .home-book-three {
+        height: 190px;
+        background: #c9b99a;
+        color: #4c4030;
+        transform: rotate(8deg) translateX(4px);
+    }
+
+    .home-art-caption {
+        position: absolute;
+        right: 0;
+        bottom: 4px;
+        padding: 10px 15px;
+        border: 1px solid #585447;
+        border-radius: 10px;
+        background: #30312b;
+        color: #e8d8b3;
+        font-size: .75rem;
+        transform: rotate(-4deg);
+    }
+
+    /* Collection */
+
+    .home-section {
+        margin-top: 56px;
+    }
+
+    .home-section-heading {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .home-section-label {
+        margin: 0 0 8px;
+        color: #705016;
+        font-size: .75rem;
+        font-weight: 750;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+    }
+
+    .home-section-heading h2 {
+        margin: 0;
+        font-size: clamp(1.8rem, 3vw, 2.5rem);
+        letter-spacing: -.045em;
+    }
+
+    .home-section-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 44px;
+        font-size: .9rem;
+        font-weight: 650;
+        text-decoration: none;
+    }
+
+    .home-collection-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 22px;
+    }
+
+    .home-collection-card {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid #e5e0d6;
+        border-radius: 20px;
+        background: #fff;
+        color: #242424;
+        text-decoration: none;
+        box-shadow: 0 10px 30px rgba(32, 33, 31, .04);
+        transition:
+            transform 200ms ease,
+            box-shadow 200ms ease,
+            border-color 200ms ease;
+    }
+
+    .home-collection-card:hover {
+        border-color: #b99a5f;
+        color: #242424;
+        box-shadow: 0 18px 40px rgba(32, 33, 31, .1);
+    }
+
+    .home-collection-art {
+        display: grid;
+        place-items: center;
+        min-height: 180px;
+        border-bottom: 1px solid rgba(32, 33, 31, .05);
+    }
+
+    .home-collection-art svg {
+        width: 92px;
+        height: 92px;
+        filter: drop-shadow(0 10px 8px rgba(32, 33, 31, .08));
+        transition: transform 200ms ease;
+    }
+
+    .home-books-art {
+        background: #eee7d8;
+        color: #725932;
+    }
+
+    .home-music-art {
+        background: #e4e7de;
+        color: #4d5c46;
+    }
+
+    .home-toys-art {
+        background: #f0e2d9;
+        color: #8b5941;
+    }
+
+    .home-collection-body {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        padding: 25px;
+    }
+
+    .home-collection-body h3 {
+        margin: 0 0 10px;
+        font-size: 1.35rem;
+    }
+
+    .home-collection-body p {
+        margin-bottom: 20px;
+        color: #65635e;
+        font-size: .95rem;
+        line-height: 1.7;
+    }
+
+    .home-card-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: auto;
+        color: #705016;
+        font-size: .85rem;
+        font-weight: 700;
+    }
+
+    .home-card-arrow {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border: 1px solid #e2d5b7;
+        border-radius: 50%;
+        background: #fbf6ea;
+    }
+
+    /* Kiosk banner */
+
+    .home-kiosk-banner {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 26px;
+        margin-top: 38px;
+        padding: clamp(24px, 4vw, 38px);
+        border: 1px solid #e1d2af;
+        border-radius: 22px;
+        background:
+            radial-gradient(
+                ellipse at 100% 0%,
+                rgba(233, 188, 98, .2),
+                transparent 65%
+            ),
+            #f3eddf;
+    }
+
+    .home-kiosk-icon {
+        display: grid;
+        place-items: center;
+        width: 68px;
+        height: 68px;
+        border: 1px solid #d9c79e;
+        border-radius: 18px;
+        background: #fffaf0;
+        color: #705016;
+    }
+
+    .home-kiosk-icon svg {
+        width: 36px;
+        height: 36px;
+    }
+
+    .home-kiosk-banner h2 {
+        margin: 0 0 8px;
+        font-size: 1.5rem;
+    }
+
+    .home-kiosk-banner p {
+        max-width: 530px;
+        margin: 0;
+        color: #656158;
+        font-size: .95rem;
+        line-height: 1.7;
+    }
+
+    .home-kiosk-banner .btn {
+        white-space: nowrap;
+    }
+
+    .home-bottom-note {
+        margin: 25px 0 0;
+        color: #65635e;
+        font-size: .85rem;
+        text-align: center;
+    }
+
+    @@media (hover: hover) and (pointer: fine) {
+        .home-collection-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .home-collection-card:hover svg {
+            transform: rotate(-5deg) scale(1.06);
+        }
+    }
+
+    @@media (max-width: 991.98px) {
+        .home-hero {
+            grid-template-columns: 1.2fr .8fr;
+            gap: 12px;
+        }
+
+        .home-art {
+            transform: scale(.85);
+        }
+
+        .home-kiosk-banner {
+            grid-template-columns: auto 1fr;
+        }
+
+        .home-kiosk-banner > .btn {
+            grid-column: 2;
+            justify-self: start;
+        }
+    }
+
+    @@media (max-width: 767.98px) {
+        .home-hero {
+            grid-template-columns: 1fr;
+            gap: 16px;
+            min-height: auto;
+            padding: 32px 26px;
+        }
+
+        .home-hero h1 {
+            font-size: clamp(2.7rem, 9vw, 4rem);
+        }
+
+        .home-art {
+            min-height: 280px;
+            transform: scale(.9);
+        }
+
+        .home-section {
+            margin-top: 38px;
+        }
+
+        .home-collection-grid {
+            grid-template-columns: 1fr;
+            gap: 18px;
+        }
+
+        .home-collection-card {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+        }
+
+        .home-collection-art {
+            min-height: 100%;
+            border-right: 1px solid rgba(32, 33, 31, .05);
+            border-bottom: 0;
+        }
+
+        .home-collection-art svg {
+            width: 65px;
+            height: 65px;
+        }
+
+        .home-collection-body {
+            padding: 22px;
+        }
+
+        .home-kiosk-banner {
+            gap: 18px;
+        }
+    }
+
+    @@media (max-width: 399.98px) {
+        .home-actions {
+            flex-direction: column;
+        }
+
+        .home-collection-card {
+            grid-template-columns: 85px 1fr;
+        }
+
+        .home-collection-art svg {
+            width: 52px;
+            height: 52px;
+        }
+
+        .home-collection-body {
+            padding: 18px;
+        }
+
+        .home-kiosk-banner {
+            grid-template-columns: 1fr;
+        }
+
+        .home-kiosk-banner > .btn {
+            grid-column: 1;
+            width: 100%;
+        }
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .home-collection-card,
+        .home-collection-art svg {
+            transition: none;
+        }
+
+        .home-collection-card:hover,
+        .home-collection-card:hover svg {
+            transform: none;
+        }
+    }
+</style>
+
+<div class="home-page">
+    <section class="home-hero" aria-labelledby="hero-heading">
+        <div>
+            <div class="home-eyebrow">
+                Welcome to LibraryLink NT
+            </div>
+
+            <h1 id="hero-heading">
+                Your next<br />
+                <span>chapter</span><br />
+                starts here.
+            </h1>
+
+            <p class="home-hero-description">
+                Find a story to get lost in, music to move you,
+                or something playful to take home.
+                Explore your library, your way.
+            </p>
+
+            <div class="home-actions">
+                <a class="btn btn-primary"
+                   asp-controller="Catalogue"
+                   asp-action="Index">
+                    Explore the collection
+                    <span aria-hidden="true">↗</span>
+                </a>
+
+                <a class="btn home-secondary"
+                   asp-controller="Kiosk"
+                   asp-action="Index">
+                    Open kiosk
+                    <span aria-hidden="true">→</span>
+                </a>
+            </div>
+
+            <p class="home-hero-note">
+                Browse online. Use your library card at the kiosk to borrow.
+            </p>
+        </div>
+
+        <div class="home-art" aria-hidden="true">
+            <div class="home-art-circle"></div>
+
+            <div class="home-book-stack">
+                <div class="home-book home-book-one">
+                    <span>DISCOVER</span>
+                </div>
+
+                <div class="home-book home-book-two">
+                    <span>YOUR NEXT CHAPTER</span>
+                </div>
+
+                <div class="home-book home-book-three">
+                    <span>EXPLORE</span>
+                </div>
+            </div>
+
+            <div class="home-art-caption">
+                A little curiosity goes a long way.
+            </div>
+        </div>
+    </section>
+
+    <section class="home-section"
+             aria-labelledby="collection-heading">
+
+        <div class="home-section-heading">
+            <div>
+                <p class="home-section-label">
+                    Made for curious minds
+                </p>
+
+                <h2 id="collection-heading">
+                    More than a bookshelf.
+                </h2>
+            </div>
+
+            <a class="home-section-link"
+               asp-controller="Catalogue"
+               asp-action="Index">
+                View the catalogue
+                <span aria-hidden="true">↗</span>
+            </a>
+        </div>
+
+        <div class="home-collection-grid">
+            <a class="home-collection-card"
+               asp-controller="Catalogue"
+               asp-action="Index">
+
+                <div class="home-collection-art home-books-art">
+                    <svg viewBox="0 0 100 100"
+                         fill="none"
+                         aria-hidden="true"
+                         focusable="false">
+                        <path d="M50 27C38 19 23 19 12 23V75C25 71 39 73 50 81C61 73 75 71 88 75V23C77 19 62 19 50 27Z"
+                              fill="currentColor"
+                              opacity=".14" />
+                        <path d="M50 27C38 19 23 19 12 23V75C25 71 39 73 50 81M50 27C62 19 77 19 88 23V75C75 71 61 73 50 81M50 27V81"
+                              stroke="currentColor"
+                              stroke-width="3"
+                              stroke-linecap="round"
+                              stroke-linejoin="round" />
+                        <path d="M23 36C30 35 37 37 41 39M23 47C30 46 37 48 41 50M59 39C64 37 71 35 77 36M59 50C64 48 71 46 77 47"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round" />
+                    </svg>
+                </div>
+
+                <div class="home-collection-body">
+                    <h3>Books &amp; stories</h3>
+
+                    <p>
+                        Turn a page, discover a new perspective,
+                        and find your next favourite read.
+                    </p>
+
+                    <span class="home-card-link">
+                        Explore the catalogue
+                        <span class="home-card-arrow"
+                              aria-hidden="true">↗</span>
+                    </span>
+                </div>
+            </a>
+
+            <a class="home-collection-card"
+               asp-controller="Catalogue"
+               asp-action="Index">
+
+                <div class="home-collection-art home-music-art">
+                    <svg viewBox="0 0 100 100"
+                         fill="none"
+                         aria-hidden="true"
+                         focusable="false">
+                        <circle cx="50" cy="50" r="35"
+                                fill="currentColor"
+                                opacity=".12" />
+                        <circle cx="50" cy="50" r="35"
+                                stroke="currentColor"
+                                stroke-width="3" />
+                        <circle cx="50" cy="50" r="23"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                opacity=".5" />
+                        <circle cx="50" cy="50" r="11"
+                                fill="currentColor" />
+                        <circle cx="50" cy="50" r="3"
+                                fill="#e4e7de" />
+                        <path d="M29 42C31 35 36 30 42 28M58 72C65 70 70 65 72 58"
+                              stroke="currentColor"
+                              stroke-width="3"
+                              stroke-linecap="round" />
+                    </svg>
+                </div>
+
+                <div class="home-collection-body">
+                    <h3>Music &amp; sound</h3>
+
+                    <p>
+                        Rediscover a favourite artist or let
+                        a different sound become your soundtrack.
+                    </p>
+
+                    <span class="home-card-link">
+                        Explore the catalogue
+                        <span class="home-card-arrow"
+                              aria-hidden="true">↗</span>
+                    </span>
+                </div>
+            </a>
+
+            <a class="home-collection-card"
+               asp-controller="Catalogue"
+               asp-action="Index">
+
+                <div class="home-collection-art home-toys-art">
+                    <svg viewBox="0 0 100 100"
+                         fill="none"
+                         aria-hidden="true"
+                         focusable="false">
+                        <rect x="15" y="47" width="34" height="34"
+                              rx="5"
+                              fill="currentColor"
+                              opacity=".15" />
+                        <rect x="15" y="47" width="34" height="34"
+                              rx="5"
+                              stroke="currentColor"
+                              stroke-width="3" />
+                        <path d="M58 46L77 79H39L58 46Z"
+                              fill="currentColor"
+                              opacity=".15" />
+                        <path d="M58 46L77 79H39L58 46Z"
+                              stroke="currentColor"
+                              stroke-width="3"
+                              stroke-linejoin="round" />
+                        <circle cx="59" cy="28" r="15"
+                                fill="currentColor"
+                                opacity=".15" />
+                        <circle cx="59" cy="28" r="15"
+                                stroke="currentColor"
+                                stroke-width="3" />
+                    </svg>
+                </div>
+
+                <div class="home-collection-body">
+                    <h3>Play &amp; discover</h3>
+
+                    <p>
+                        Make room for imagination with toys
+                        that encourage learning and discovery.
+                    </p>
+
+                    <span class="home-card-link">
+                        Explore the catalogue
+                        <span class="home-card-arrow"
+                              aria-hidden="true">↗</span>
+                    </span>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <section class="home-kiosk-banner"
+             aria-labelledby="kiosk-heading">
+
+        <div class="home-kiosk-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48"
+                 fill="none"
+                 focusable="false">
+                <rect x="8" y="8" width="32" height="23"
+                      rx="4"
+                      stroke="currentColor"
+                      stroke-width="2.5" />
+                <path d="M19 31V39M29 31V39M14 40H34"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                      stroke-linecap="round" />
+                <path d="M16 17V23M20 17V23M25 17V23M28 17V23M32 17V23"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round" />
+            </svg>
+        </div>
+
+        <div>
+            <h2 id="kiosk-heading">
+                Your library card. Your next discovery.
+            </h2>
+
+            <p>
+                Open the self-service kiosk to view your account,
+                check your loans, and borrow an available item
+                using its library barcode.
+            </p>
+        </div>
+
+        <a class="btn btn-secondary"
+           asp-controller="Kiosk"
+           asp-action="Index">
+            Start a kiosk session
+            <span aria-hidden="true"> →</span>
+        </a>
+    </section>
+
+    <p class="home-bottom-note">
+        Need help with your card or borrowing?
+        Speak with the library service desk.
+    </p>
 </div>

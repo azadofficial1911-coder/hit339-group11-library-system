@@ -7,7 +7,7 @@ Executed on 15 October 2026 in this Linux development environment using .NET SDK
 | Check | Actual outcome | Evidence |
 | --- | --- | --- |
 | Release solution build | Passed; zero warnings and errors | `evidence/release-build.txt` |
-| Automated Release integration suite | 36 passed, 0 failed, 0 skipped | `evidence/automated-tests.txt`, `evidence/azd-r2-r4-results.xml` |
+| Automated Release integration suite | 43 passed, 0 failed, 0 skipped | `evidence/automated-tests.txt`, `evidence/azd-r2-r4-results.xml` |
 | SQL Server model versus migration snapshot | No pending changes | `Sql_server_migrations_match_model_and_generate_script` test and EF CLI |
 | SQL Server idempotent SQL generation | Passed; branches, desks and transfers included | Same test; EF CLI script generation |
 | Dependency restore after package pin updates | Passed without vulnerability warnings | Final build/test output |
@@ -25,6 +25,7 @@ The original dependency graph reported Pkcs security advisories. A direct refere
 - Reception dispatch and receipt work through real antiforgery-protected HTTP forms. Borrowing and manual Book editing cannot overwrite transit state. Admin pages and baseline Book/Music/Toy/Catalogue pages render successfully.
 - Anonymous and Manager users cannot manage transfers. Reception cannot manage branches/desks. Missing antiforgery tokens are rejected.
 - Branch/desk forms accept valid input and reject duplicates/missing fields. Branch codes normalise to uppercase; an active desk prevents branch deactivation.
+- Kiosk review/confirmation is tested both normally and with dispatch between review and confirmation; no loan is created for the transit copy. CSV import validates optional BranchCode, saves the resolved branch, and rejects a destination deactivated after preview. Reports retain transit inventory counts and CSV/PDF exports succeed.
 - Repeating the optional three-branch seed does not duplicate branches, desks or demo copies.
 
 ## Checks still required before final push/merge readiness
@@ -37,7 +38,7 @@ The original dependency graph reported Pkcs security advisories. A direct refere
 | Visual keyboard, NVDA, contrast, text resize and narrow-screen checks | Not run here; labelled controls and semantic markup are implemented | Shared accessibility reviewers |
 | R2 peer review | Pending | Asraful; genuine review/PR link |
 | R4 peer review | Pending | Safiyan; genuine review/PR link |
-| Reconcile against current remote main | Pending; only uploaded commit 39a5cac and its local changes were available | Compare/review before PR merge |
+| Reconcile against current remote main | Integrated origin/main through 0ed3060; full suite rerun | Merge commit preserves teammate history |
 
 No GitHub issue numbers, review approvals, actual work hours or VM screenshots have been invented. The repository's existing Assignment 2 README describes its earlier testing; it is not evidence of new R2/R4 testing.
 

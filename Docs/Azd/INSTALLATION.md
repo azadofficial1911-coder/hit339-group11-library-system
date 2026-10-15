@@ -1,6 +1,6 @@
 # Installation and running
 
-These instructions cover Azd's R2/R4 branch. They extend the original Assignment 2 guide. Windows SQL Server LocalDB and the university VM still require independent verification; the automated test record explains what was run here.
+These instructions cover Azd's R2/R4 branch. They extend the group guide and integrate main through 0ed3060. Windows SQL Server LocalDB and the university VM still require independent verification; the automated test record explains what was run here.
 
 ## Prerequisites
 
@@ -89,6 +89,10 @@ Remove-Item Env:AZD_TEST_SQLSERVER
 ```
 
 This optional mode creates a uniquely named `LibraryR2R4Tests_<guid>` database for each test, applies all migrations and removes only that generated test database afterwards. It ignores any Database value in the supplied connection string. The account needs create/drop database permissions. It never targets the application's data database.
+
+## CSV integration
+
+The merged importer accepts an optional `BranchCode` column. Use an active branch code, such as `DEMO-DAR`; preview and confirmation both validate it. Omitted or blank values retain legacy behaviour and create unassigned stock. Example: `Docs/Azd/sample-branch-import.csv`.
 
 ## Troubleshooting
 

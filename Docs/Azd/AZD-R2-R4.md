@@ -67,8 +67,8 @@ flowchart TD
     L["Existing staff borrowing"] --> D
 ```
 
-The public catalogue now displays each copy's branch and written transit state. Safiyan's services remain the queue/notification owners; only the availability guard and receipt integration needed for R4 were changed. Malia's importer can populate BranchId directly for validated new rows and should reuse the active-branch rules. Asraful's kiosk must accept only Available/eligible Reserved stock and respect EF concurrency failures; it must not overwrite transit status.
+The public catalogue now displays each copy's branch and written transit state. Safiyan's services remain the queue/notification owners; only the availability guard and receipt integration needed for R4 were changed. Malia's merged importer now accepts optional BranchCode, validates an active branch in preview and again in the serializable confirmation transaction, and writes BranchId for valid new rows. Existing CSV files without the column remain supported. Asraful's kiosk must accept only Available/eligible Reserved stock and respect EF concurrency failures; it must not overwrite transit status.
 
 ## Scope and review
 
-This does not implement teammates' kiosk, importer or reporting modules, or fabricate board issues, hours, meetings, peer approvals or VM evidence. Final merging remains subject to review and a successful database/VM check. Implementation and test preparation in this session used ChatGPT/Codex assistance; review and understand the code and follow the unit's disclosure rules.
+This branch preserves the teammates' merged kiosk, importer and reporting modules, or fabricate board issues, hours, meetings, peer approvals or VM evidence. Final merging remains subject to review and a successful database/VM check. Implementation and test preparation in this session used ChatGPT/Codex assistance; review and understand the code and follow the unit's disclosure rules.
