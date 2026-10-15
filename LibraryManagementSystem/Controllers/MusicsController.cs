@@ -93,6 +93,8 @@ namespace LibraryManagementSystem.Controllers
         {
             music.LibraryCode = NormaliseLibraryCode(music.LibraryCode);
             music.DateAdded = DateTime.UtcNow;
+            if (music.Status == ItemStatus.InTransit)
+                ModelState.AddModelError(nameof(Item.Status), "Use Transfers to dispatch an existing copy.");
 
             if (await LibraryCodeExistsAsync(music.LibraryCode))
             {
@@ -182,6 +184,9 @@ namespace LibraryManagementSystem.Controllers
                         nameof(Music.LibraryCode),
                         "This library code is already being used.");
                 }
+
+                if (oldStatus == ItemStatus.InTransit || musicToUpdate.Status == ItemStatus.InTransit)
+                    ModelState.AddModelError(nameof(Item.Status), "Use Transfers to dispatch or receive this copy.");
 
                 if (ModelState.IsValid)
                 {

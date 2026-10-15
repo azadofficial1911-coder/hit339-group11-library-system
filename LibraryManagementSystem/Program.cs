@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
+using LibraryManagementSystem.Security;
+using Microsoft.AspNetCore.Authentication;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Database configuration.
@@ -35,6 +38,11 @@ builder.Services
     })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
+
+builder.Services.AddAuthentication()
+    .AddScheme<AuthenticationSchemeOptions, CatalogueApiAuthenticationHandler>(
+        CatalogueApiAuthenticationHandler.SchemeName, _ => { });
+builder.Services.AddScoped<TransferService>();
 
 // MVC pages and controllers.
 builder.Services.AddControllersWithViews();
@@ -113,6 +121,8 @@ app.UseAuthorization();
 
 app.MapStaticAssets();
 
+app.MapControllers();
+
 // Default MVC routing includes /Kiosk once its controller exists.
 app.MapControllerRoute(
         name: "default",
@@ -133,4 +143,11 @@ if (app.Configuration.GetValue<bool>(
     await ReservationDemoSeeder.SeedAsync(app.Services);
 }
 
+if (app.Configuration.GetValue<bool>("DemoData:SeedBranchScenario"))
+{
+    await BranchDemoSeeder.SeedAsync(app.Services);
+}
+
 app.Run();
+
+public partial class Program { }

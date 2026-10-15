@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using LibraryManagementSystem.Data;
 using LibraryManagementSystem.Models;
 using LibraryManagementSystem.Services;
@@ -154,6 +154,8 @@ namespace LibraryManagementSystem.Controllers
                     return View("Index", error);
                 }
 
+                await using var transaction = await _context.Database.BeginTransactionAsync(
+                    System.Data.IsolationLevel.Serializable, cancellationToken);
                 using var stream = new MemoryStream(cached.Bytes);
 
                 // Recheck the original CSV against current database data.
@@ -199,6 +201,7 @@ namespace LibraryManagementSystem.Controllers
 
                     // Save the entire batch in one database transaction.
                     await _context.SaveChangesAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
                 }
                 catch (DbUpdateException)
                 {

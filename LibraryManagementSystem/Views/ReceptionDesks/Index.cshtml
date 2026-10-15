@@ -1,0 +1,12 @@
+@model IEnumerable<LibraryManagementSystem.Models.ReceptionDesk>
+@{ ViewData["Title"] = "Reception desks"; }
+<h1>Reception desks</h1>
+@if (TempData["SuccessMessage"] is string message) { <div class="alert alert-success" role="status">@message</div> }
+<p><a asp-action="Create" class="btn btn-primary">Add desk</a></p>
+@if (!Model.Any()) { <p>No desks have been added. Add an active branch first.</p> }
+else {
+<div class="table-responsive"><table class="table"><caption>Reception desks and their physical branches</caption>
+<thead><tr><th scope="col">Desk</th><th scope="col">Branch</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead><tbody>
+@foreach (var desk in Model) { <tr><th scope="row">@desk.Name (@desk.Code)</th><td>@desk.Branch?.Name</td><td>@(desk.IsActive ? "Active" : "Inactive")</td><td><a asp-action="Edit" asp-route-id="@desk.Id" aria-label="Edit @desk.Name">Edit</a></td></tr> }
+</tbody></table></div>
+}

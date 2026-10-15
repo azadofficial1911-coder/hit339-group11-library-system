@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using LibraryManagementSystem.Models;
 using LibraryManagementSystem.ViewModels;
@@ -64,6 +64,7 @@ namespace LibraryManagementSystem.Services
             item.Name = row.Name.Trim();
             item.Description = row.Description.Trim();
             item.LibraryCode = row.LibraryCode.Trim();
+            item.BranchId = row.BranchId;
             item.Status = ItemStatus.Available;
             item.DateAdded = DateTime.Today;
 

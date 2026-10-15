@@ -31,5 +31,11 @@ namespace LibraryManagementSystem.Models
         [DataType(DataType.Date)]
         [Display(Name = "Date Added")]
         public DateTime DateAdded { get; set; } = DateTime.Today;
+
+        [Range(1, int.MaxValue, ErrorMessage = "Select a valid branch.")]
+        [Display(Name = "Branch")]
+        public int? BranchId { get; set; }
+
+        public Branch? Branch { get; set; }
     }
 }

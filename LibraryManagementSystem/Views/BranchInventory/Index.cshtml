@@ -1,0 +1,54 @@
+@model LibraryManagementSystem.ViewModels.BranchInventoryViewModel
+@using LibraryManagementSystem.Models
+@{ ViewData["Title"] = "Branch inventory and transfers"; }
+<h1>Branch inventory and transfers</h1>
+<p>Each library code represents one physical copy. Dispatch makes it unavailable until the destination confirms receipt. Branch names marked Demo are illustrative.</p>
+@foreach (var key in new[] { "SuccessMessage", "ErrorMessage" }) {
+    if (TempData[key] is string message) { <div class="alert @(key == "SuccessMessage" ? "alert-success" : "alert-danger")" role="status">@message</div> }
+}
+<form method="get" class="d-flex flex-wrap gap-2 mb-4">
+<label for="branchFilter" class="form-label">View branch</label>
+<select id="branchFilter" asp-for="BranchId" name="branchId" class="form-select w-auto"><option value="">All branches and unassigned copies</option>
+@foreach (var b in Model.Branches) { <option value="@b.Id">@b.Name</option> }
+</select><button class="btn btn-primary" type="submit">Filter</button>
+</form>
+@if (!Model.Items.Any()) { <p>No copies match this filter. Add items from the existing Book, Music or Toy pages.</p> }
+else {
+<div class="table-responsive"><table class="table align-middle"><caption>Physical inventory and transfer actions</caption>
+<thead><tr><th scope="col">Copy</th><th scope="col">Branch</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead><tbody>
+@foreach (var item in Model.Items) {
+<tr><th scope="row">@item.Name (@item.LibraryCode)</th><td>@(item.Branch?.Name ?? "Unassigned")</td><td>@(item.Status == ItemStatus.InTransit ? "In transit" : item.Status.ToString())</td><td>
+@if (item.Status == ItemStatus.Available && (item.BranchId != null || User.IsInRole(RoleNames.Admin))) {
+<form asp-action="@(item.BranchId == null ? "Assign" : "Dispatch")" method="post" class="d-flex flex-wrap gap-2">
+<input type="hidden" name="itemId" value="@item.Id" />
+<label for="destination-@item.Id" class="visually-hidden">Destination for @item.LibraryCode</label>
+<select id="destination-@item.Id" name="@(item.BranchId == null ? "branchId" : "destinationId")" required class="form-select w-auto"><option value="">Select destination</option>
+@foreach (var b in Model.Branches.Where(b => b.Id != item.BranchId)) { <option value="@b.Id">@b.Name</option> }
+</select><button type="submit" class="btn btn-outline-primary">@(item.BranchId == null ? "Assign" : "Dispatch")</button>
+</form>
+} else { <span>Unavailable for transfer</span> }
+</td></tr>
+}
+</tbody></table></div>
+}
+<h2 class="mt-4">Transfer history</h2><p>Latest 100 transfers matching the selected branch. Receipt requires confirmation of the destination.</p>
+@if (!Model.Transfers.Any()) { <p>No transfers recorded.</p> }
+else {
+<div class="table-responsive"><table class="table"><caption>Dispatch and receipt history in UTC</caption>
+<thead><tr><th scope="col">Copy</th><th scope="col">Journey</th><th scope="col">Status and audit</th><th scope="col">Receipt</th></tr></thead><tbody>
+@foreach (var t in Model.Transfers) {
+<tr><th scope="row">@t.Item.LibraryCode</th><td>@t.SourceBranch.Name → @t.DestinationBranch.Name</td><td>@t.Status<br />Dispatched @t.DispatchedAt.ToString("u") by @t.DispatchedBy
+@if (t.ReceivedAt.HasValue) { <br /><span>Received @t.ReceivedAt.Value.ToString("u") by @t.ReceivedBy</span> }
+</td><td>
+@if (t.Status == TransferStatus.Dispatched) {
+<form asp-action="Receive" method="post">
+<input name="id" type="hidden" value="@t.Id" />
+<label for="receipt-@t.Id">Receiving branch</label><select id="receipt-@t.Id" name="receivingBranchId" required class="form-select"><option value="">Confirm destination</option>
+@foreach (var b in Model.Branches) { <option value="@b.Id">@b.Name</option> }
+</select><button class="btn btn-primary mt-2" type="submit">Confirm receipt</button>
+</form>
+} else { <span>Completed</span> }
+</td></tr>
+}
+</tbody></table></div>
+}

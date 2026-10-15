@@ -1,4 +1,4 @@
-﻿using LibraryManagementSystem.Models;
+using LibraryManagementSystem.Models;
 
 namespace LibraryManagementSystem.ViewModels
 {
@@ -29,6 +29,8 @@ namespace LibraryManagementSystem.ViewModels
         public ItemStatus Status { get; set; }
 
         public string ItemType { get; set; } = string.Empty;
+
+        public string? BranchName { get; set; }
 
         public string PrimaryDetail { get; set; } = string.Empty;
 

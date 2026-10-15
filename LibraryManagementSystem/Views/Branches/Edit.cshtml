@@ -1,0 +1,11 @@
+@model LibraryManagementSystem.Models.Branch
+@{ ViewData["Title"] = "Edit branch"; }
+<h1>Edit branch</h1>
+<form asp-action="Edit" method="post" class="col-lg-8">
+    <input asp-for="Id" type="hidden" />
+    <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+    <partial name="_Form" model="Model" />
+    <button class="btn btn-primary" type="submit">Save branch</button>
+    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+</form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

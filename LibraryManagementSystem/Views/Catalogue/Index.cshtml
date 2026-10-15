@@ -1,4 +1,4 @@
-﻿@using LibraryManagementSystem.Models
+@using LibraryManagementSystem.Models
 @model LibraryManagementSystem.ViewModels.CatalogueSearchViewModel
 
 @{
@@ -624,10 +624,11 @@
 
                     <div class="catalogue-item-body">
                         <span class="catalogue-status @statusClass">
-                            @item.Status
+                            @(item.Status == ItemStatus.InTransit ? "In transit" : item.Status.ToString())
                         </span>
 
                         <h3>@item.Name</h3>
+                        <p>Branch: @(item.BranchName ?? "Ask staff for location")</p>
 
                         <div class="catalogue-code">
                             Library code:

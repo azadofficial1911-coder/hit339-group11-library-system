@@ -1,4 +1,4 @@
-﻿using LibraryManagementSystem.Data;
+using LibraryManagementSystem.Data;
 using LibraryManagementSystem.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualBasic.FileIO;
@@ -82,7 +82,7 @@ namespace LibraryManagementSystem.Services
                 "Author", "Genre", "Isbn", "PublicationYear",
                 "Artist", "MusicGenre", "ReleaseYear", "Format",
                 "ToyType", "RecommendedAge", "Manufacturer",
-                "SafetyInformation"
+                "SafetyInformation", "BranchCode"
             };
 
             foreach (var header in headers)
@@ -126,6 +126,14 @@ namespace LibraryManagementSystem.Services
                 row.Description = row.Fields["Description"];
                 row.LibraryCode = row.Fields["LibraryCode"];
 
+                if (row.Fields.TryGetValue("BranchCode", out var branchCode) && !string.IsNullOrWhiteSpace(branchCode))
+                {
+                    branchCode = branchCode.Trim().ToUpperInvariant();
+                    var branch = await _context.Branches.AsNoTracking()
+                        .SingleOrDefaultAsync(b => b.Code == branchCode && b.IsActive, cancellationToken);
+                    if (branch == null) row.Errors.Add("BranchCode must identify an active branch.");
+                    else row.BranchId = branch.Id;
+                }
                 ImportItemFactory.Create(row);
             }
 

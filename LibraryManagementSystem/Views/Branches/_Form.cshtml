@@ -1,0 +1,45 @@
+@model LibraryManagementSystem.Models.Branch
+                <div class="mb-3">
+                    <label asp-for="Code" class="form-label">Branch code *</label>
+                    <input asp-for="Code" class="form-control" />
+                    <span asp-validation-for="Code" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Name" class="form-label">Branch name *</label>
+                    <input asp-for="Name" class="form-control" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Address" class="form-label">Address *</label>
+                    <input asp-for="Address" class="form-control" />
+                    <span asp-validation-for="Address" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="PhoneNumber" class="form-label"></label>
+                    <input asp-for="PhoneNumber" class="form-control" type="tel" />
+                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="OpeningHours" class="form-label"></label>
+                    <input asp-for="OpeningHours" class="form-control" />
+                    <span asp-validation-for="OpeningHours" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="AccessibilityInformation" class="form-label"></label>
+                    <textarea asp-for="AccessibilityInformation" class="form-control" rows="3"
+                              aria-describedby="accessibilityHelp"></textarea>
+                    <div id="accessibilityHelp" class="form-text">
+                        For example: step-free entrance, accessible toilet, hearing loop.
+                    </div>
+                    <span asp-validation-for="AccessibilityInformation" class="text-danger"></span>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <label asp-for="IsActive" class="form-check-label">Active branch</label>
+                </div>

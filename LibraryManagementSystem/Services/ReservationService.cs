@@ -204,7 +204,7 @@ namespace LibraryManagementSystem.Services
                 Item? item = await _context.Items
                     .FirstOrDefaultAsync(record => record.Id == itemId, ct);
 
-                if (item != null && item.Status != ItemStatus.Destroyed)
+                if (item != null && (item.Status == ItemStatus.Available || item.Status == ItemStatus.Reserved))
                 {
                     bool alreadyHeld = await _context.Reservations
                         .AnyAsync(hold =>

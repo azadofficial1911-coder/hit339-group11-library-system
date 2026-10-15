@@ -4,6 +4,16 @@
 
 LibraryLink NT is an ASP.NET Core MVC library management application built with .NET 10. It supports books, music, toys, borrowers, loans, returns and fines, with a public catalogue and dedicated self-service kiosk.
 
+## Azd R2 and R4 update
+
+This feature branch adds the secure read-only API, branches, reception desks, inventory assignment and audited transfers. It integrates main through `0ed3060` (kiosk, importer and reports).
+
+- [R2/R4 installation and running](Docs/Azd/INSTALLATION.md)
+- [API and branch integration](Docs/Azd/AZD-R2-R4.md)
+- [Automated test evidence and remaining checks](Docs/Azd/TEST-EVIDENCE.md)
+
+Peer review and independent SQL Server/VM verification are still required. Do not commit the API key.
+
 ## Team and Responsibilities
 
 | Member | Main responsibilities |
@@ -375,7 +385,7 @@ Use the integrated installation instructions to:
 
 Do not substitute a Git feature branch name for a physical library location.
 
-The final setup guide must describe the actual branch-selection settings used by the integrated application.
+For the actual seed, branch filter, desk association, transfer lifecycle and SQL Server instructions, follow [the R2/R4 installation guide](Docs/Azd/INSTALLATION.md).
 
 ## Application Structure
 
