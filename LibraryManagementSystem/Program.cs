@@ -84,6 +84,11 @@ builder.Services.AddScoped<
 // Automatically check for loan reminders while the app runs.
 builder.Services.AddHostedService<NotificationBackgroundService>();
 
+// Register the CSV import preview service.
+builder.Services.AddScoped<ICsvImportService, CsvImportService>();
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ReportService>();
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 var app = builder.Build();
 
 // Error handling.

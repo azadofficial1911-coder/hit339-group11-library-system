@@ -1,0 +1,121 @@
+﻿@model LibraryManagementSystem.ViewModels.ImportPreviewViewModel
+
+@{
+    ViewData["Title"] = "Import Preview";
+}
+
+<h1>Import preview</h1>
+
+<p>File: <strong>@Model.FileName</strong></p>
+
+@if (Model.Errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <ul class="mb-0">
+            @foreach (var error in Model.Errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+<p>
+    Total rows: <strong>@Model.Rows.Count</strong> |
+    Valid: <strong>@Model.ValidRowCount</strong> |
+    Invalid: <strong>@Model.InvalidRowCount</strong>
+</p>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-striped">
+        <caption>
+            Review the items and any validation errors before importing.
+        </caption>
+        <thead>
+            <tr>
+                <th scope="col">CSV row</th>
+                <th scope="col">Type</th>
+                <th scope="col">Name</th>
+                <th scope="col">Library code</th>
+                <th scope="col">Details</th>
+                <th scope="col">Validation</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Model.Rows)
+            {
+                <tr>
+                    <td>@row.RowNumber</td>
+                    <td>@row.ItemType</td>
+                    <td>@row.Name</td>
+                    <td>@row.LibraryCode</td>
+                    <td>
+                        <details>
+                            <summary>View fields</summary>
+                            <dl class="mt-2 mb-0">
+                                @foreach (var field in row.Fields)
+                                {
+                                    <dt>@field.Key</dt>
+                                    <dd>
+                                        @(string.IsNullOrWhiteSpace(field.Value)
+                                            ? "—" : field.Value)
+                                    </dd>
+                                }
+                            </dl>
+                        </details>
+                    </td>
+                    <td>
+                        @if (row.IsValid)
+                        {
+                            <span class="text-success">Valid</span>
+                        }
+                        else
+                        {
+                            <ul class="text-danger mb-0">
+                                @foreach (var error in row.Errors)
+                                {
+                                    <li>@error</li>
+                                }
+                            </ul>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.CanImport && !string.IsNullOrEmpty(Model.PreviewToken))
+{
+    <div class="alert alert-info">
+        All rows are valid. Confirm within 15 minutes.
+        Items will be saved with Available status.
+    </div>
+
+    <form asp-controller="Import"
+          asp-action="Confirm"
+          method="post"
+          class="mb-3">
+
+        <input type="hidden"
+               name="previewToken"
+               value="@Model.PreviewToken" />
+
+        <button type="submit" class="btn btn-success">
+            Confirm import (@Model.ValidRowCount items)
+        </button>
+    </form>
+}
+else
+{
+    <div class="alert alert-warning" role="alert">
+        Nothing has been imported. Fix the errors in your CSV
+        and upload it again.
+    </div>
+}
+
+<a asp-controller="Import"
+   asp-action="Index"
+   class="btn btn-outline-secondary">
+    Upload another file
+</a>
