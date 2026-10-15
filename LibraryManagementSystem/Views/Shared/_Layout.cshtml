@@ -35,10 +35,8 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0" />
-
     <meta name="theme-color" content="#20211f" />
 
     <title>@ViewData["Title"] | LibraryLink NT</title>
@@ -193,18 +191,15 @@
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark library-navbar"
              aria-label="Main navigation">
-
             <div class="container">
                 <a class="navbar-brand"
                    asp-controller="Home"
                    asp-action="Index"
                    aria-label="LibraryLink NT home">
-
                     <span class="brand-copy">
                         <span class="brand-name">
                             LibraryLink <span>NT</span>
                         </span>
-
                         <span class="brand-caption">
                             Discover something new
                         </span>
@@ -217,14 +212,12 @@
                         data-bs-target="#mainNavigation"
                         aria-controls="mainNavigation"
                         aria-expanded="false"
-                        aria-label="Open navigation menu">
-
+                        aria-label="Toggle navigation menu">
                     <span class="navbar-toggler-icon"></span>
                 </button>
 
                 <div class="collapse navbar-collapse"
                      id="mainNavigation">
-
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
                             <a class="nav-link @Active("Home", "Index")"
@@ -261,6 +254,15 @@
                                    asp-action="Index"
                                    aria-current="@CurrentPage("Admin")">
                                     Admin
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link @Active("Import")"
+                                   asp-controller="Import"
+                                   asp-action="Index"
+                                   aria-current="@CurrentPage("Import")">
+                                    CSV Import
                                 </a>
                             </li>
                         }
@@ -331,7 +333,6 @@
                     <span class="footer-brand">
                         LibraryLink NT
                     </span>
-
                     <p class="footer-description">
                         Books, music and more. A little discovery every day.
                     </p>
@@ -339,7 +340,6 @@
 
                 <nav class="footer-links"
                      aria-label="Footer navigation">
-
                     <a asp-controller="Catalogue"
                        asp-action="Index">
                         Explore Library
@@ -361,7 +361,6 @@
                 <span>
                     &copy; @DateTime.Now.Year LibraryLink NT
                 </span>
-
                 <span>
                     HIT339 · Group 11 demonstration
                 </span>
@@ -370,9 +369,7 @@
     </footer>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
-
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-
     <script src="~/js/site.js"
             asp-append-version="true"></script>
 
