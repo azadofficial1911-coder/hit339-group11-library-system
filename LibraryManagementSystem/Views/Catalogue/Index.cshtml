@@ -29,12 +29,12 @@
         letter-spacing: -.055em;
     }
 
-    .catalogue-heading h1 span {
-        color: #705016;
-        font-family: Georgia, serif;
-        font-style: italic;
-        font-weight: 400;
-    }
+        .catalogue-heading h1 span {
+            color: #705016;
+            font-family: Georgia, serif;
+            font-style: italic;
+            font-weight: 400;
+        }
 
     .catalogue-heading p {
         max-width: 560px;
@@ -74,10 +74,10 @@
         margin-bottom: 22px;
     }
 
-    .catalogue-results-heading h2 {
-        margin: 0;
-        font-size: 1.5rem;
-    }
+        .catalogue-results-heading h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
 
     .catalogue-count {
         padding: 7px 14px;
@@ -104,15 +104,13 @@
         border-radius: 20px;
         background: #fff;
         box-shadow: 0 8px 28px rgba(32, 33, 31, .04);
-        transition:
-            border-color 200ms ease,
-            box-shadow 200ms ease;
+        transition: border-color 200ms ease, box-shadow 200ms ease;
     }
 
-    .catalogue-item:hover {
-        border-color: #b99a5f;
-        box-shadow: 0 16px 38px rgba(32, 33, 31, .09);
-    }
+        .catalogue-item:hover {
+            border-color: #b99a5f;
+            box-shadow: 0 16px 38px rgba(32, 33, 31, .09);
+        }
 
     .catalogue-item-art {
         position: relative;
@@ -124,21 +122,21 @@
         color: #725932;
     }
 
-    .catalogue-item-art::before {
-        content: "";
-        position: absolute;
-        width: 115px;
-        height: 115px;
-        border: 1px solid currentColor;
-        border-radius: 50%;
-        opacity: .12;
-    }
+        .catalogue-item-art::before {
+            content: "";
+            position: absolute;
+            width: 115px;
+            height: 115px;
+            border: 1px solid currentColor;
+            border-radius: 50%;
+            opacity: .12;
+        }
 
-    .catalogue-item-art svg {
-        position: relative;
-        width: 64px;
-        height: 64px;
-    }
+        .catalogue-item-art svg {
+            position: relative;
+            width: 64px;
+            height: 64px;
+        }
 
     .catalogue-art-music {
         background: #e4e7de;
@@ -187,13 +185,13 @@
         font-weight: 700;
     }
 
-    .catalogue-status::before {
-        content: "";
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: currentColor;
-    }
+        .catalogue-status::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
 
     .catalogue-status-available {
         border-color: #c6dfcd;
@@ -234,11 +232,11 @@
         overflow-wrap: anywhere;
     }
 
-    .catalogue-code strong {
-        color: #454138;
-        font-family: Consolas, monospace;
-        font-weight: 600;
-    }
+        .catalogue-code strong {
+            color: #454138;
+            font-family: Consolas, monospace;
+            font-weight: 600;
+        }
 
     .catalogue-description {
         flex: 1;
@@ -273,9 +271,9 @@
         line-height: 1.6;
     }
 
-    .catalogue-item-footer a {
-        font-weight: 650;
-    }
+        .catalogue-item-footer a {
+            font-weight: 650;
+        }
 
     .catalogue-empty {
         padding: 60px 24px;
@@ -296,10 +294,10 @@
         color: #705016;
     }
 
-    .catalogue-empty-symbol svg {
-        width: 28px;
-        height: 28px;
-    }
+        .catalogue-empty-symbol svg {
+            width: 28px;
+            height: 28px;
+        }
 
     .catalogue-empty h3 {
         font-size: 1.5rem;
@@ -338,9 +336,9 @@
             gap: 18px;
         }
 
-        .catalogue-heading > .btn {
-            width: 100%;
-        }
+            .catalogue-heading > .btn {
+                width: 100%;
+            }
     }
 
     @@media (prefers-reduced-motion: reduce) {
@@ -389,7 +387,7 @@
           aria-label="Search the library collection"
           class="row g-3 align-items-end">
 
-        <div class="col-12 col-lg-5">
+        <div class="col-12 col-lg-4">
             <label class="form-label" for="searchTerm">
                 Search the collection
             </label>
@@ -410,7 +408,6 @@
             <select class="form-select"
                     id="itemType"
                     name="itemType">
-
                 <option value="">All collections</option>
 
                 <option value="Book"
@@ -438,7 +435,6 @@
             <select class="form-select"
                     id="status"
                     name="status">
-
                 <option value="">All statuses</option>
 
                 <option value="Available"
@@ -466,6 +462,37 @@
                     Destroyed
                 </option>
             </select>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-4">
+            <label class="form-label" for="bookFormat">
+                Book format
+            </label>
+
+            <select class="form-select"
+                    id="bookFormat"
+                    name="bookFormat"
+                    aria-describedby="book-format-help">
+                <option value="">All formats</option>
+
+                <option value="LargePrint"
+                        selected="@(Model.SelectedBookFormat == "LargePrint")">
+                    Large print
+                </option>
+
+                <option value="AudioBook"
+                        selected="@(Model.SelectedBookFormat == "AudioBook")">
+                    Audiobook
+                </option>
+            </select>
+        </div>
+
+        <div class="col-12">
+            <p id="book-format-help" class="form-text mb-0">
+                Book format applies to books.
+                Choose All collections or Books to find large-print
+                books or audiobooks.
+            </p>
         </div>
 
         <div class="col-12 col-lg-3">
@@ -629,16 +656,37 @@
 
                         <h3>@item.Name</h3>
 
+                        @if (item.IsLargePrint || item.IsAudioBook)
+                        {
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                @if (item.IsLargePrint)
+                                {
+                                    <span class="catalogue-count">
+                                        Large print
+                                    </span>
+                                }
+
+                                @if (item.IsAudioBook)
+                                {
+                                    <span class="catalogue-count">
+                                        Audiobook
+                                    </span>
+                                }
+                            </div>
+                        }
+
                         <div class="catalogue-code">
                             Library code:
                             <strong>@item.LibraryCode</strong>
                         </div>
 
-                        <p class="catalogue-description">@(
-                            string.IsNullOrWhiteSpace(item.Description)
-                                ? "No description has been added for this item."
-                                : item.Description
-                        )</p>
+                        <p class="catalogue-description">
+                            @(
+                                    string.IsNullOrWhiteSpace(item.Description)
+                                        ? "No description has been added for this item."
+                                        : item.Description
+                                )
+                        </p>
 
                         @if (!string.IsNullOrWhiteSpace(item.PrimaryDetail) ||
                              !string.IsNullOrWhiteSpace(item.SecondaryDetail))

@@ -29,8 +29,10 @@
 
                     <div class="row g-3">
                         <div class="col-md-8">
-                            <label asp-for="Name" class="form-label"></label>
-                            <input asp-for="Name" class="form-control" />
+                            <label asp-for="Name"
+                                   class="form-label"></label>
+                            <input asp-for="Name"
+                                   class="form-control" />
                             <span asp-validation-for="Name"
                                   class="text-danger"></span>
                         </div>
@@ -38,10 +40,8 @@
                         <div class="col-md-4">
                             <label asp-for="LibraryCode"
                                    class="form-label"></label>
-
                             <input asp-for="LibraryCode"
                                    class="form-control" />
-
                             <span asp-validation-for="LibraryCode"
                                   class="text-danger"></span>
                         </div>
@@ -49,32 +49,36 @@
                         <div class="col-12">
                             <label asp-for="Description"
                                    class="form-label"></label>
-
                             <textarea asp-for="Description"
                                       class="form-control"
                                       rows="4"></textarea>
-
                             <span asp-validation-for="Description"
                                   class="text-danger"></span>
                         </div>
 
                         <div class="col-md-6">
-                            <label asp-for="Author" class="form-label"></label>
-                            <input asp-for="Author" class="form-control" />
+                            <label asp-for="Author"
+                                   class="form-label"></label>
+                            <input asp-for="Author"
+                                   class="form-control" />
                             <span asp-validation-for="Author"
                                   class="text-danger"></span>
                         </div>
 
                         <div class="col-md-6">
-                            <label asp-for="Genre" class="form-label"></label>
-                            <input asp-for="Genre" class="form-control" />
+                            <label asp-for="Genre"
+                                   class="form-label"></label>
+                            <input asp-for="Genre"
+                                   class="form-control" />
                             <span asp-validation-for="Genre"
                                   class="text-danger"></span>
                         </div>
 
                         <div class="col-md-4">
-                            <label asp-for="Isbn" class="form-label"></label>
-                            <input asp-for="Isbn" class="form-control" />
+                            <label asp-for="Isbn"
+                                   class="form-label"></label>
+                            <input asp-for="Isbn"
+                                   class="form-control" />
                             <span asp-validation-for="Isbn"
                                   class="text-danger"></span>
                         </div>
@@ -82,10 +86,8 @@
                         <div class="col-md-4">
                             <label asp-for="PublicationYear"
                                    class="form-label"></label>
-
                             <input asp-for="PublicationYear"
                                    class="form-control" />
-
                             <span asp-validation-for="PublicationYear"
                                   class="text-danger"></span>
                         </div>
@@ -93,20 +95,55 @@
                         <div class="col-md-4">
                             <label asp-for="Status"
                                    class="form-label"></label>
-
                             <select asp-for="Status"
                                     asp-items="Html.GetEnumSelectList<ItemStatus>()"
                                     class="form-select">
                             </select>
-
                             <span asp-validation-for="Status"
                                   class="text-danger"></span>
+                        </div>
+
+                        <div class="col-12">
+                            <fieldset class="border rounded p-3">
+                                <legend class="float-none w-auto px-2 fs-6">
+                                    Accessible book formats
+                                </legend>
+
+                                <p id="book-format-help"
+                                   class="text-muted small">
+                                    Select the formats available for this book.
+                                    Leave both unchecked for standard print.
+                                </p>
+
+                                <div class="form-check mb-2">
+                                    <input asp-for="IsLargePrint"
+                                           class="form-check-input"
+                                           aria-describedby="book-format-help" />
+                                    <label asp-for="IsLargePrint"
+                                           class="form-check-label">
+                                        Large print
+                                    </label>
+                                    <span asp-validation-for="IsLargePrint"
+                                          class="text-danger"></span>
+                                </div>
+
+                                <div class="form-check">
+                                    <input asp-for="IsAudioBook"
+                                           class="form-check-input"
+                                           aria-describedby="book-format-help" />
+                                    <label asp-for="IsAudioBook"
+                                           class="form-check-label">
+                                        Audiobook
+                                    </label>
+                                    <span asp-validation-for="IsAudioBook"
+                                          class="text-danger"></span>
+                                </div>
+                            </fieldset>
                         </div>
 
                         <div class="col-md-6">
                             <label asp-for="DateAdded"
                                    class="form-label"></label>
-
                             <input asp-for="DateAdded"
                                    class="form-control"
                                    readonly />

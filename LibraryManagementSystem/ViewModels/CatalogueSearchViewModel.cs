@@ -11,6 +11,8 @@ namespace LibraryManagementSystem.ViewModels
 
         public string SelectedStatus { get; set; } = string.Empty;
 
+        public string SelectedBookFormat { get; set; } = string.Empty;
+
         public List<CatalogueItemViewModel> Items { get; set; } =
             new List<CatalogueItemViewModel>();
     }
@@ -33,5 +35,9 @@ namespace LibraryManagementSystem.ViewModels
         public string PrimaryDetail { get; set; } = string.Empty;
 
         public string SecondaryDetail { get; set; } = string.Empty;
+
+        public bool IsLargePrint { get; set; }
+
+        public bool IsAudioBook { get; set; }
     }
 }

@@ -502,6 +502,12 @@ namespace LibraryManagementSystem.Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<bool>("IsAudioBook")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsLargePrint")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Isbn")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");

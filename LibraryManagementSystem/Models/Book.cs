@@ -23,5 +23,11 @@ namespace LibraryManagementSystem.Models
         [Range(1000, 2100)]
         [Display(Name = "Publication Year")]
         public int PublicationYear { get; set; }
+
+        [Display(Name = "Large print")]
+        public bool IsLargePrint { get; set; }
+
+        [Display(Name = "Audiobook")]
+        public bool IsAudioBook { get; set; }
     }
 }

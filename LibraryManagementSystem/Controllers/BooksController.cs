@@ -24,8 +24,7 @@ namespace LibraryManagementSystem.Controllers
         // GET: Books
         public async Task<IActionResult> Index(
             string? searchString,
-            ItemStatus? status
-        )
+            ItemStatus? status)
         {
             IQueryable<Book> books = _context.Books
                 .AsNoTracking();
@@ -43,7 +42,8 @@ namespace LibraryManagementSystem.Controllers
 
             if (status.HasValue)
             {
-                books = books.Where(book => book.Status == status.Value);
+                books = books.Where(book =>
+                    book.Status == status.Value);
             }
 
             ViewData["CurrentSearch"] = searchString;
@@ -52,8 +52,7 @@ namespace LibraryManagementSystem.Controllers
             return View(
                 await books
                     .OrderBy(book => book.Name)
-                    .ToListAsync()
-            );
+                    .ToListAsync());
         }
 
         // GET: Books/Details/5
@@ -84,8 +83,7 @@ namespace LibraryManagementSystem.Controllers
                 {
                     DateAdded = DateTime.Today,
                     Status = ItemStatus.Available
-                }
-            );
+                });
         }
 
         // POST: Books/Create
@@ -94,23 +92,26 @@ namespace LibraryManagementSystem.Controllers
         public async Task<IActionResult> Create(
             [Bind(
                 "Name,Description,LibraryCode,Status," +
-                "Author,Genre,Isbn,PublicationYear"
+                "Author,Genre,Isbn,PublicationYear," +
+                "IsLargePrint,IsAudioBook"
             )]
-            Book book
-        )
+            Book book)
         {
-            book.LibraryCode = book.LibraryCode.Trim().ToUpperInvariant();
+            book.LibraryCode = (book.LibraryCode ?? string.Empty)
+                .Trim()
+                .ToUpperInvariant();
+
             book.DateAdded = DateTime.Today;
 
             bool libraryCodeExists = await _context.Items
-                .AnyAsync(item => item.LibraryCode == book.LibraryCode);
+                .AnyAsync(item =>
+                    item.LibraryCode == book.LibraryCode);
 
             if (libraryCodeExists)
             {
                 ModelState.AddModelError(
                     nameof(Book.LibraryCode),
-                    "This library code is already being used."
-                );
+                    "This library code is already being used.");
             }
 
             if (!ModelState.IsValid)
@@ -132,8 +133,7 @@ namespace LibraryManagementSystem.Controllers
             {
                 ModelState.AddModelError(
                     string.Empty,
-                    "The book could not be saved. Please check the information and try again."
-                );
+                    "The book could not be saved. Please check the information and try again.");
 
                 return View(book);
             }
@@ -164,10 +164,10 @@ namespace LibraryManagementSystem.Controllers
             int id,
             [Bind(
                 "Id,Name,Description,LibraryCode,Status," +
-                "Author,Genre,Isbn,PublicationYear"
+                "Author,Genre,Isbn,PublicationYear," +
+                "IsLargePrint,IsAudioBook"
             )]
-            Book submittedBook
-        )
+            Book submittedBook)
         {
             if (id != submittedBook.Id)
             {
@@ -183,7 +183,9 @@ namespace LibraryManagementSystem.Controllers
             }
 
             submittedBook.LibraryCode =
-                submittedBook.LibraryCode.Trim().ToUpperInvariant();
+                (submittedBook.LibraryCode ?? string.Empty)
+                    .Trim()
+                    .ToUpperInvariant();
 
             bool libraryCodeExists = await _context.Items
                 .AnyAsync(item =>
@@ -194,8 +196,7 @@ namespace LibraryManagementSystem.Controllers
             {
                 ModelState.AddModelError(
                     nameof(Book.LibraryCode),
-                    "This library code is already being used."
-                );
+                    "This library code is already being used.");
             }
 
             if (!ModelState.IsValid)
@@ -207,6 +208,7 @@ namespace LibraryManagementSystem.Controllers
             existingBook.Name = submittedBook.Name;
             existingBook.Description = submittedBook.Description;
             existingBook.LibraryCode = submittedBook.LibraryCode;
+
             // Remember the old status so reservations can react to a repair.
             ItemStatus oldStatus = existingBook.Status;
 
@@ -215,6 +217,8 @@ namespace LibraryManagementSystem.Controllers
             existingBook.Genre = submittedBook.Genre;
             existingBook.Isbn = submittedBook.Isbn;
             existingBook.PublicationYear = submittedBook.PublicationYear;
+            existingBook.IsLargePrint = submittedBook.IsLargePrint;
+            existingBook.IsAudioBook = submittedBook.IsAudioBook;
 
             try
             {
@@ -239,8 +243,7 @@ namespace LibraryManagementSystem.Controllers
 
                 ModelState.AddModelError(
                     string.Empty,
-                    "Another user changed this book. Please reload the page and try again."
-                );
+                    "Another user changed this book. Please reload the page and try again.");
 
                 submittedBook.DateAdded = existingBook.DateAdded;
                 return View(submittedBook);
@@ -249,8 +252,7 @@ namespace LibraryManagementSystem.Controllers
             {
                 ModelState.AddModelError(
                     string.Empty,
-                    "The book could not be updated. Please check the information and try again."
-                );
+                    "The book could not be updated. Please check the information and try again.");
 
                 submittedBook.DateAdded = existingBook.DateAdded;
                 return View(submittedBook);

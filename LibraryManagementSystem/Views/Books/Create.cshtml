@@ -98,6 +98,44 @@
                             <span asp-validation-for="Status"
                                   class="text-danger"></span>
                         </div>
+
+                        <div class="col-12">
+                            <fieldset class="border rounded p-3">
+                                <legend class="float-none w-auto px-2 fs-6">
+                                    Accessible book formats
+                                </legend>
+
+                                <p id="book-format-help"
+                                   class="text-muted small">
+                                    Select the formats that apply to this item.
+                                    Leave both unchecked for a standard print book.
+                                </p>
+
+                                <div class="form-check mb-2">
+                                    <input asp-for="IsLargePrint"
+                                           class="form-check-input"
+                                           aria-describedby="book-format-help" />
+
+                                    <label asp-for="IsLargePrint"
+                                           class="form-check-label"></label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input asp-for="IsAudioBook"
+                                           class="form-check-input"
+                                           aria-describedby="book-format-help" />
+
+                                    <label asp-for="IsAudioBook"
+                                           class="form-check-label"></label>
+                                </div>
+
+                                <span asp-validation-for="IsLargePrint"
+                                      class="text-danger"></span>
+
+                                <span asp-validation-for="IsAudioBook"
+                                      class="text-danger"></span>
+                            </fieldset>
+                        </div>
                     </div>
 
                     <div class="d-flex gap-2 mt-4">

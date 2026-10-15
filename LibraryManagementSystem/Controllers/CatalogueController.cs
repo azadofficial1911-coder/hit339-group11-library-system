@@ -18,19 +18,37 @@ namespace LibraryManagementSystem.Controllers
             _context = context;
         }
 
+        [HttpGet]
         public async Task<IActionResult> Index(
             string? searchTerm,
             string? itemType,
-            string? status)
+            string? status,
+            string? bookFormat,
+            CancellationToken cancellationToken)
         {
+            searchTerm = searchTerm?.Trim();
+
+            itemType = itemType switch
+            {
+                "Book" => "Book",
+                "Music" => "Music",
+                "Toy" => "Toy",
+                _ => string.Empty
+            };
+
+            bookFormat = bookFormat switch
+            {
+                "LargePrint" => "LargePrint",
+                "AudioBook" => "AudioBook",
+                _ => string.Empty
+            };
+
             IQueryable<Item> query = _context.Items
                 .AsNoTracking();
 
-            // Search using the common properties inherited from Item.
+            // Search common item properties.
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
-                searchTerm = searchTerm.Trim();
-
                 query = query.Where(item =>
                     item.Name.Contains(searchTerm) ||
                     item.LibraryCode.Contains(searchTerm) ||
@@ -40,7 +58,7 @@ namespace LibraryManagementSystem.Controllers
                     ));
             }
 
-            // Filter using the TPH inherited item types.
+            // Filter by collection.
             switch (itemType)
             {
                 case "Book":
@@ -56,27 +74,50 @@ namespace LibraryManagementSystem.Controllers
                     break;
             }
 
-            // Convert the submitted text into the ItemStatus enum safely.
-            if (Enum.TryParse(
-                status,
-                true,
-                out ItemStatus selectedStatus))
+            // A book-format filter only matches books.
+            // Combining it with Music or Toy produces no matches.
+            if (!string.IsNullOrEmpty(bookFormat))
+            {
+                if (itemType == "Music" || itemType == "Toy")
+                {
+                    query = query.Where(item => false);
+                }
+                else
+                {
+                    IQueryable<Book> books = query.OfType<Book>();
+
+                    query = bookFormat == "LargePrint"
+                        ? books.Where(book => book.IsLargePrint)
+                        : books.Where(book => book.IsAudioBook);
+                }
+            }
+
+            // Accept only defined ItemStatus values.
+            string selectedStatusText = string.Empty;
+
+            if (Enum.TryParse<ItemStatus>(
+                    status,
+                    true,
+                    out var selectedStatus) &&
+                Enum.IsDefined(typeof(ItemStatus), selectedStatus))
             {
                 query = query.Where(item =>
                     item.Status == selectedStatus);
+
+                selectedStatusText = selectedStatus.ToString();
             }
 
             List<Item> databaseItems = await query
                 .OrderBy(item => item.Name)
                 .ThenBy(item => item.LibraryCode)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             CatalogueSearchViewModel model = new()
             {
                 SearchTerm = searchTerm ?? string.Empty,
-                SelectedItemType = itemType ?? string.Empty,
-                SelectedStatus = status ?? string.Empty,
-
+                SelectedItemType = itemType,
+                SelectedStatus = selectedStatusText,
+                SelectedBookFormat = bookFormat,
                 Items = databaseItems
                     .Select(CreatePublicItem)
                     .ToList()
@@ -102,7 +143,10 @@ namespace LibraryManagementSystem.Controllers
                     ItemType = "Book",
                     PrimaryDetail = $"Author: {book.Author}",
                     SecondaryDetail =
-                        $"Genre: {book.Genre} | Year: {book.PublicationYear}"
+                        $"Genre: {book.Genre} | " +
+                        $"Year: {book.PublicationYear}",
+                    IsLargePrint = book.IsLargePrint,
+                    IsAudioBook = book.IsAudioBook
                 },
 
                 Music music => new CatalogueItemViewModel
