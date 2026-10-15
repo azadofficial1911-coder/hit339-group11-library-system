@@ -1,4 +1,4 @@
-﻿using LibraryManagementSystem.Data;
+using LibraryManagementSystem.Data;
 using LibraryManagementSystem.Models;
 using LibraryManagementSystem.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -24,7 +24,7 @@ namespace LibraryManagementSystem.Controllers
             string? status)
         {
             IQueryable<Item> query = _context.Items
-                .AsNoTracking();
+                .AsNoTracking().Include(item => item.Branch);
 
             // Search using the common properties inherited from Item.
             if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -99,6 +99,7 @@ namespace LibraryManagementSystem.Controllers
                         book.Description ?? "No description available.",
                     LibraryCode = book.LibraryCode,
                     Status = book.Status,
+                    BranchName = book.Branch?.Name,
                     ItemType = "Book",
                     PrimaryDetail = $"Author: {book.Author}",
                     SecondaryDetail =
@@ -113,6 +114,7 @@ namespace LibraryManagementSystem.Controllers
                         music.Description ?? "No description available.",
                     LibraryCode = music.LibraryCode,
                     Status = music.Status,
+                    BranchName = music.Branch?.Name,
                     ItemType = "Music",
                     PrimaryDetail = $"Artist: {music.Artist}",
                     SecondaryDetail =
@@ -129,6 +131,7 @@ namespace LibraryManagementSystem.Controllers
                         toy.Description ?? "No description available.",
                     LibraryCode = toy.LibraryCode,
                     Status = toy.Status,
+                    BranchName = toy.Branch?.Name,
                     ItemType = "Toy",
                     PrimaryDetail =
                         $"Manufacturer: {toy.Manufacturer}",

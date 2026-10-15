@@ -1,5 +1,6 @@
-﻿using LibraryManagementSystem.Models;
+using LibraryManagementSystem.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagementSystem.Data
@@ -24,9 +25,57 @@ namespace LibraryManagementSystem.Data
 
         public DbSet<NotificationLog> NotificationLogs { get; set; } = default!;
 
+        public DbSet<Branch> Branches { get; set; } = default!;
+
+        public DbSet<ReceptionDesk> ReceptionDesks { get; set; } = default!;
+
+        public DbSet<ItemTransfer> ItemTransfers { get; set; } = default!;
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+            // Match Identity's runtime key lengths in design-time tooling as well.
+            builder.Entity<IdentityUserLogin<string>>().Property(x => x.LoginProvider).HasMaxLength(128);
+            builder.Entity<IdentityUserLogin<string>>().Property(x => x.ProviderKey).HasMaxLength(128);
+            builder.Entity<IdentityUserToken<string>>().Property(x => x.LoginProvider).HasMaxLength(128);
+            builder.Entity<IdentityUserToken<string>>().Property(x => x.Name).HasMaxLength(128);
+
+            // Branch codes and reception desk codes must be unique.
+            builder.Entity<Branch>()
+                .HasIndex(branch => branch.Code)
+                .IsUnique();
+
+            builder.Entity<ReceptionDesk>()
+                .HasIndex(desk => desk.Code)
+                .IsUnique();
+
+            // An existing item may temporarily have no branch until it is assigned.
+            builder.Entity<Item>()
+                .HasOne(item => item.Branch)
+                .WithMany()
+                .HasForeignKey(item => item.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Each reception desk belongs to one branch.
+            builder.Entity<ReceptionDesk>()
+                .HasOne(desk => desk.Branch)
+                .WithMany()
+                .HasForeignKey(desk => desk.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Optimistic checks protect borrowing/editing against concurrent transfers.
+            builder.Entity<Item>().Property(item => item.Status).IsConcurrencyToken();
+            builder.Entity<Item>().Property(item => item.BranchId).IsConcurrencyToken();
+            builder.Entity<ItemTransfer>().Property(t => t.Status)
+                .HasConversion<string>().HasMaxLength(20).IsConcurrencyToken();
+            builder.Entity<ItemTransfer>().HasOne(t => t.Item).WithMany()
+                .HasForeignKey(t => t.ItemId).OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<ItemTransfer>().HasOne(t => t.SourceBranch).WithMany()
+                .HasForeignKey(t => t.SourceBranchId).OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<ItemTransfer>().HasOne(t => t.DestinationBranch).WithMany()
+                .HasForeignKey(t => t.DestinationBranchId).OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<ItemTransfer>().HasIndex(t => t.ItemId).IsUnique()
+                .HasFilter("[Status] = 'Dispatched'");
 
             // Store Book, Music and Toy records in one Items table.
             builder.Entity<Item>()

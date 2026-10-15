@@ -92,6 +92,8 @@ namespace LibraryManagementSystem.Controllers
         {
             toy.LibraryCode = NormaliseLibraryCode(toy.LibraryCode);
             toy.DateAdded = DateTime.UtcNow;
+            if (toy.Status == ItemStatus.InTransit)
+                ModelState.AddModelError(nameof(Item.Status), "Use Transfers to dispatch an existing copy.");
 
             if (await LibraryCodeExistsAsync(toy.LibraryCode))
             {
@@ -181,6 +183,9 @@ namespace LibraryManagementSystem.Controllers
                         nameof(Toy.LibraryCode),
                         "This library code is already being used.");
                 }
+
+                if (oldStatus == ItemStatus.InTransit || toyToUpdate.Status == ItemStatus.InTransit)
+                    ModelState.AddModelError(nameof(Item.Status), "Use Transfers to dispatch or receive this copy.");
 
                 if (ModelState.IsValid)
                 {

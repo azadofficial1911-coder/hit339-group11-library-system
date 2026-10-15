@@ -101,6 +101,8 @@ namespace LibraryManagementSystem.Controllers
         {
             book.LibraryCode = book.LibraryCode.Trim().ToUpperInvariant();
             book.DateAdded = DateTime.Today;
+            if (book.Status == ItemStatus.InTransit)
+                ModelState.AddModelError(nameof(Item.Status), "Use Transfers to dispatch an existing copy.");
 
             bool libraryCodeExists = await _context.Items
                 .AnyAsync(item => item.LibraryCode == book.LibraryCode);
@@ -201,6 +203,12 @@ namespace LibraryManagementSystem.Controllers
             if (!ModelState.IsValid)
             {
                 submittedBook.DateAdded = existingBook.DateAdded;
+                return View(submittedBook);
+            }
+
+            if (existingBook.Status == ItemStatus.InTransit || submittedBook.Status == ItemStatus.InTransit)
+            {
+                ModelState.AddModelError(nameof(Item.Status), "Use Transfers to dispatch or receive this copy.");
                 return View(submittedBook);
             }
 

@@ -1,4 +1,4 @@
-﻿@using LibraryManagementSystem.Models
+@using LibraryManagementSystem.Models
 
 <!DOCTYPE html>
 <html lang="en">
@@ -76,6 +76,11 @@
                                     Admin Dashboard
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Branches" asp-action="Index">Branches</a>
+                            </li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="ReceptionDesks" asp-action="Index">Reception desks</a>
+                            </li>
                         }
 
                         @if (User.IsInRole(RoleNames.Reception))
@@ -120,6 +125,9 @@
                             </li>
                         }
 
+                        @if (User.IsInRole(RoleNames.Admin) || User.IsInRole(RoleNames.Reception)) {
+                            <li class="nav-item"><a class="nav-link" asp-controller="BranchInventory" asp-action="Index">Branch stock and transfers</a></li>
+                        }
                         <li class="nav-item">
                             <a class="nav-link"
                                asp-controller="Home"

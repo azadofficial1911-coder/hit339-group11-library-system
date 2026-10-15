@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace LibraryManagementSystem.Models
 {
@@ -18,6 +18,9 @@ namespace LibraryManagementSystem.Models
 
         // Held at the front of a reservation queue for one borrower (R5).
         [Display(Name = "Reserved")]
-        Reserved
+        Reserved,
+
+        [Display(Name = "In transit")]
+        InTransit
     }
 }

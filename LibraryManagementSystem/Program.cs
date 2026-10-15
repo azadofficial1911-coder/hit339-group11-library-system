@@ -3,6 +3,9 @@ using LibraryManagementSystem.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
+using LibraryManagementSystem.Security;
+using Microsoft.AspNetCore.Authentication;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Read the SQL Server connection string.
@@ -38,6 +41,11 @@ builder.Services
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
+builder.Services.AddAuthentication()
+    .AddScheme<AuthenticationSchemeOptions, CatalogueApiAuthenticationHandler>(
+        CatalogueApiAuthenticationHandler.SchemeName, _ => { });
+builder.Services.AddScoped<TransferService>();
+
 // Register MVC controllers and Razor views.
 builder.Services.AddControllersWithViews();
 
@@ -69,6 +77,11 @@ var app = builder.Build();
 // Create the roles and demonstration accounts.
 await IdentitySeeder.SeedAsync(app.Services);
 
+if (app.Configuration.GetValue<bool>("DemoData:SeedBranchScenario"))
+{
+    await BranchDemoSeeder.SeedAsync(app.Services);
+}
+
 // Optional demo records for testing reservations and notifications.
 if (app.Configuration.GetValue<bool>("DemoData:SeedReservationScenario"))
 {
@@ -95,6 +108,8 @@ app.UseAuthorization();
 
 app.MapStaticAssets();
 
+app.MapControllers();
+
 // Configure the standard MVC route.
 app.MapControllerRoute(
         name: "default",
@@ -107,3 +122,5 @@ app.MapRazorPages()
     .WithStaticAssets();
 
 app.Run();
+
+public partial class Program { }

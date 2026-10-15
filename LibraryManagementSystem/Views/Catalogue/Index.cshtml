@@ -1,4 +1,4 @@
-﻿@using LibraryManagementSystem.Models
+@using LibraryManagementSystem.Models
 @model LibraryManagementSystem.ViewModels.CatalogueSearchViewModel
 
 @{
@@ -164,11 +164,12 @@ else
                             </span>
 
                             <span class="badge @statusColour">
-                                @item.Status
+                                @(item.Status == ItemStatus.InTransit ? "In transit" : item.Status.ToString())
                             </span>
                         </div>
 
                         <h3 class="h4">@item.Name</h3>
+                        <p>Branch: @(item.BranchName ?? "Ask staff for location")</p>
 
                         <div class="text-muted small mb-3">
                             Library code:

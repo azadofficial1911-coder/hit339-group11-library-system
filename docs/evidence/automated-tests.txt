@@ -1,0 +1,11 @@
+  LibraryManagementSystem -> /workspace/scratch/616148adcfde/project/hit339-group11-library-system/LibraryManagementSystem/bin/Release/net10.0/LibraryManagementSystem.dll
+  LibraryManagementSystem.Tests -> /workspace/scratch/616148adcfde/project/hit339-group11-library-system/LibraryManagementSystem.Tests/bin/Release/net10.0/LibraryManagementSystem.Tests.dll
+Test run for /workspace/scratch/616148adcfde/project/hit339-group11-library-system/LibraryManagementSystem.Tests/bin/Release/net10.0/LibraryManagementSystem.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+WARNING: Overwriting results file: /workspace/scratch/616148adcfde/project/hit339-group11-library-system/LibraryManagementSystem.Tests/TestResults/azd-r2-r4.trx
+Results File: /workspace/scratch/616148adcfde/project/hit339-group11-library-system/LibraryManagementSystem.Tests/TestResults/azd-r2-r4.trx
+
+Passed!  - Failed:     0, Passed:    36, Skipped:     0, Total:    36, Duration: 18 s - LibraryManagementSystem.Tests.dll (net10.0)
